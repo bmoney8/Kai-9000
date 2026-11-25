@@ -252,4 +252,26 @@ class AppSettingsTest {
         assertTrue(instances.any { it.serviceId == Service.OpenAI.id })
         assertTrue(instances.any { it.serviceId == Service.Gemini.id })
     }
+
+    @Test
+    fun `on-device provider remains after remote provider in fallback order`() {
+        val chain = buildFallbackChain(
+            instances = listOf(
+                ServiceInstance("remote", Service.OpenAICompatible.id),
+                ServiceInstance("litert", Service.LiteRT.id),
+            ),
+            isFreeServicePrimary = false,
+            isFreeFallbackEnabled = false,
+            hasLocalInferenceEngine = true,
+        )
+
+        assertEquals(
+            listOf(Service.OpenAICompatible.id, Service.LiteRT.id),
+            chain.map { it.service.id },
+        )
+        assertEquals(
+            listOf("remote", "litert"),
+            chain.map { it.instanceId },
+        )
+    }
 }
