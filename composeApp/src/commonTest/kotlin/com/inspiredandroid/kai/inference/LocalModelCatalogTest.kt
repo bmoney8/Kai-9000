@@ -34,6 +34,33 @@ class LocalModelCatalogTest {
     }
 
     @Test
+    fun loadMemoryRequirementScalesWithSelectedModelAndContext() {
+        val smallerModel = MODEL_CATALOG.first()
+        val largerModel = MODEL_CATALOG.first { it.sizeBytes > smallerModel.sizeBytes }
+        val smallerRequirement = requiredModelMemoryBytes(
+            modelBytes = smallerModel.sizeBytes,
+            acceleratorMemoryMb = smallerModel.gpuMemoryMb,
+            contextTokens = smallerModel.defaultContextTokens,
+            kvBytesPerToken = smallerModel.kvPerTokenBytes,
+        )
+        val largerModelRequirement = requiredModelMemoryBytes(
+            modelBytes = largerModel.sizeBytes,
+            acceleratorMemoryMb = largerModel.gpuMemoryMb,
+            contextTokens = largerModel.defaultContextTokens,
+            kvBytesPerToken = largerModel.kvPerTokenBytes,
+        )
+        val largerContextRequirement = requiredModelMemoryBytes(
+            modelBytes = smallerModel.sizeBytes,
+            acceleratorMemoryMb = smallerModel.gpuMemoryMb,
+            contextTokens = smallerModel.defaultContextTokens * 2,
+            kvBytesPerToken = smallerModel.kvPerTokenBytes,
+        )
+
+        assertTrue(largerModelRequirement > smallerRequirement)
+        assertTrue(largerContextRequirement > smallerRequirement)
+    }
+
+    @Test
     fun catalogContextDefaultsFitInsideTheirMaximum() {
         // A model whose export tops out at its own default (LFM2.5) has no headroom for a
         // typo to hide in: the settings slider would offer a size the engine refuses.
