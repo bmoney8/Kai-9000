@@ -11,6 +11,7 @@ import platform.Foundation.NSNumber
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
+import platform.darwin.os_proc_available_memory
 
 private val modelStorageDir: String by lazy {
     val dir = getAppFilesDirectory() + "/litert_models"
@@ -30,10 +31,8 @@ actual fun getModelStorageDirectory(): String = modelStorageDir
 
 actual fun getModelCacheDirectory(): String = modelCacheDir
 
-// iOS surfaces low-memory conditions via UIApplication.didReceiveMemoryWarning rather
-// than a queryable "available" value. Skip the pre-check (matches desktop) and rely on
-// the system warning + initialize() retry-with-CPU-backend path.
-actual fun getAvailableMemoryBytes(): Long = Long.MAX_VALUE
+actual fun getAvailableMemoryBytes(): Long =
+    iosAvailableMemoryBytes(os_proc_available_memory().toLong())
 
 @OptIn(ExperimentalForeignApi::class)
 actual fun getTotalMemoryBytes(): Long = NSProcessInfo.processInfo.physicalMemory.toLong()
