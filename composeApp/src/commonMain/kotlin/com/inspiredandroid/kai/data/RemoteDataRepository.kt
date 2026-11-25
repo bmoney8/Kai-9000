@@ -1916,6 +1916,12 @@ class RemoteDataRepository(
         appSettings.setDynamicUiEnabled(enabled)
     }
 
+    override fun isAdminModeEnabled(): Boolean = appSettings.isAdminModeEnabled()
+
+    override fun setAdminModeEnabled(enabled: Boolean) {
+        appSettings.setAdminModeEnabled(enabled)
+    }
+
     override fun getThemeMode(): ThemeMode = appSettings.getThemeMode()
 
     override fun setThemeMode(mode: ThemeMode) {

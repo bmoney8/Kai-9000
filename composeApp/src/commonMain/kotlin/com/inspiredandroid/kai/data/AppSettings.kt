@@ -285,6 +285,13 @@ class AppSettings(internal val settings: Settings) {
         settings.putBoolean(KEY_SCHEDULING_ENABLED, enabled)
     }
 
+    // Settings access mode
+    fun isAdminModeEnabled(): Boolean = settings.getBoolean(KEY_ADMIN_MODE_ENABLED, false)
+
+    fun setAdminModeEnabled(enabled: Boolean) {
+        settings.putBoolean(KEY_ADMIN_MODE_ENABLED, enabled)
+    }
+
     // Dynamic UI
     fun isDynamicUiEnabled(): Boolean = settings.getBoolean(KEY_DYNAMIC_UI_ENABLED, true)
 
@@ -577,6 +584,7 @@ class AppSettings(internal val settings: Settings) {
         const val KEY_SCHEDULED_TASKS = "scheduled_tasks"
         const val KEY_SCHEDULING_ENABLED = "scheduling_enabled"
         const val KEY_DYNAMIC_UI_ENABLED = "dynamic_ui_enabled"
+        const val KEY_ADMIN_MODE_ENABLED = "admin_mode_enabled"
         const val KEY_OLED_MODE_ENABLED = "oled_mode_enabled"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_DAEMON_ENABLED = "daemon_enabled"
