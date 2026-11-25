@@ -813,27 +813,12 @@ class RemoteDataRepository(
         return true // Optional API key services are always valid
     }
 
-    private data class FallbackEntry(val instanceId: String, val service: Service)
-
-    private fun getOrderedFallbackEntries(): List<FallbackEntry> {
-        val instances = getConfiguredServiceInstances()
-        val entries = instances.map { FallbackEntry(instanceId = it.instanceId, service = Service.fromId(it.serviceId)) }
-            .filter { it.service != Service.Free }
-            .filter { !it.service.isOnDevice || localInferenceEngine != null }
-        val freeEntry = FallbackEntry(instanceId = "free", service = Service.Free)
-        val ordered = if (entries.isEmpty()) {
-            listOf(freeEntry)
-        } else if (appSettings.isFreeServicePrimary()) {
-            listOf(freeEntry) + entries
-        } else if (appSettings.isFreeFallbackEnabled()) {
-            entries + freeEntry
-        } else {
-            entries
-        }
-        // On-device models are allowed in the fallback chain when localInferenceEngine is available.
-        // The inclusion filter at line 822 already ensures they only appear when the engine is ready.
-        return ordered
-    }
+    private fun getOrderedFallbackEntries(): List<FallbackEntry> = buildFallbackChain(
+        instances = getConfiguredServiceInstances(),
+        isFreeServicePrimary = appSettings.isFreeServicePrimary(),
+        isFreeFallbackEnabled = appSettings.isFreeFallbackEnabled(),
+        hasLocalInferenceEngine = localInferenceEngine != null,
+    )
 
     override suspend fun ask(question: String?, files: List<PlatformFile>, uiSubmission: UiSubmission?, activeSkillId: String?) {
         // The active skill (if any) is consumed for this single turn only — stored in a
