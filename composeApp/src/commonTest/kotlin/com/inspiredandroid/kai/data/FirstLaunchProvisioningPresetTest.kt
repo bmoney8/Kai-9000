@@ -109,35 +109,39 @@ class FirstLaunchProvisioningPresetTest {
 
     @Test
     fun `validation rejects empty services and missing gateway`() {
-        assertFailsWith<IllegalArgumentException> {
+        val emptyServicesError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(services = emptyList())
-        }.message?.contains("at least one service") ?: fail()
+        }
+        assertTrue(emptyServicesError.message.orEmpty().contains("at least one service"))
 
-        assertFailsWith<IllegalArgumentException> {
+        val missingGatewayError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(
                 services = listOf(PresetService(instanceId = "local", serviceId = Service.LiteRT.id)),
             )
-        }.message?.contains("OpenAI-compatible gateway") ?: fail()
+        }
+        assertTrue(missingGatewayError.message.orEmpty().contains("OpenAI-compatible gateway"))
 
-        assertFailsWith<IllegalArgumentException> {
+        val blankGatewayError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(
                 services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "")),
             )
-        }.message?.contains("base URLs must not be blank") ?: fail()
+        }
+        assertTrue(blankGatewayError.message.orEmpty().contains("base URLs must not be blank"))
     }
 
     @Test
-    fun `validation rejects duplicate instance ids and blank MCP fields`() {
-        assertFailsWith<IllegalArgumentException> {
+    fun `validation rejects duplicate instance and MCP ids`() {
+        val duplicateInstanceError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(
                 services = listOf(
                     PresetService(instanceId = "dup", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1"),
                     PresetService(instanceId = "dup", serviceId = Service.LiteRT.id),
                 ),
             )
-        }.message?.contains("instance ids must be unique") ?: fail()
+        }
+        assertTrue(duplicateInstanceError.message.orEmpty().contains("instance ids must be unique"))
 
-        assertFailsWith<IllegalArgumentException> {
+        val duplicateMcpError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(
                 services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
                 mcpServers = listOf(
@@ -145,27 +149,31 @@ class FirstLaunchProvisioningPresetTest {
                     McpServerConfig(id = "a", name = "B", url = "https://b.example/mcp"),
                 ),
             )
-        }.message?.contains("MCP server ids must be unique") ?: fail()
+        }
+        assertTrue(duplicateMcpError.message.orEmpty().contains("MCP server ids must be unique"))
 
-        assertFailsWith<IllegalArgumentException> {
+        val blankMcpIdError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(
                 services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
                 mcpServers = listOf(McpServerConfig(id = "", name = "X", url = "https://x.example/mcp")),
             )
-        }.message?.contains("MCP server ids must be unique") ?: fail()
+        }
+        assertTrue(blankMcpIdError.message.orEmpty().contains("Streamable HTTP MCP servers"))
 
-        assertFailsWith<IllegalArgumentException> {
+        val blankMcpNameError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(
                 services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
                 mcpServers = listOf(McpServerConfig(id = "x", name = "", url = "https://x.example/mcp")),
             )
-        }.message?.contains("MCP server") ?: fail()
+        }
+        assertTrue(blankMcpNameError.message.orEmpty().contains("Streamable HTTP MCP servers"))
 
-        assertFailsWith<IllegalArgumentException> {
+        val insecureMcpUrlError = assertFailsWith<IllegalArgumentException> {
             FirstLaunchProvisioningPreset(
                 services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
                 mcpServers = listOf(McpServerConfig(id = "x", name = "X", url = "http://x.example/mcp")),
             )
-        }.message?.contains("HTTPS") ?: fail()
+        }
+        assertTrue(insecureMcpUrlError.message.orEmpty().contains("HTTPS"))
     }
 }
