@@ -7,6 +7,7 @@ import com.inspiredandroid.kai.data.EmailStore
 import com.inspiredandroid.kai.data.HeartbeatManager
 import com.inspiredandroid.kai.data.ProductBuildProvisioningPreset
 import com.inspiredandroid.kai.data.applyFirstLaunchProvisioningPreset
+import com.inspiredandroid.kai.data.FirstLaunchProvisioningPreset
 import com.inspiredandroid.kai.data.MemoryStore
 import com.inspiredandroid.kai.data.NotificationStore
 import com.inspiredandroid.kai.data.RemoteDataRepository
@@ -40,6 +41,8 @@ import com.inspiredandroid.kai.ui.sandbox.SandboxSessionViewModel
 import com.inspiredandroid.kai.ui.settings.SandboxViewModel
 import com.inspiredandroid.kai.ui.settings.SettingsViewModel
 import com.inspiredandroid.kai.ui.settings.SplinterlandsViewModel
+import com.russhwolf.settings.Settings
+import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -50,7 +53,13 @@ val KAI_BUILD_FILES = named("kaiBuildFiles")
 /** Qualifier for the [PermissionController] singleton handling [permission]. */
 fun permissionQualifier(permission: AppPermission) = named(permission.name)
 
-val appModule = module {
+val appModule = createAppModule()
+
+internal fun createAppModule(
+    persistentSettingsFactory: () -> Settings = ::createSecureSettings,
+    legacySettingsFactory: () -> Settings? = ::createLegacySettings,
+    provisioningPreset: FirstLaunchProvisioningPreset? = ProductBuildProvisioningPreset.preset,
+): Module = module {
     AppPermission.entries.forEach { permission ->
         single(permissionQualifier(permission)) { PermissionController(permission) }
     }
@@ -59,14 +68,14 @@ val appModule = module {
     single<NotificationListenerController> { NotificationListenerController() }
     single<NotificationReader> { NotificationReader() }
     single<AppSettings> {
-        val persistentSettings = createSecureSettings()
-        val legacySettings = createLegacySettings()
+        val persistentSettings = persistentSettingsFactory()
+        val legacySettings = legacySettingsFactory()
         val isFreshInstallation = persistentSettings.keys.isEmpty() &&
             (legacySettings == null || legacySettings.keys.isEmpty())
         AppSettings(persistentSettings).also {
             it.runMigrations(legacySettings)
             it.applyFirstLaunchProvisioningPreset(
-                preset = ProductBuildProvisioningPreset.preset,
+                preset = provisioningPreset,
                 isFreshInstallation = isFreshInstallation,
             )
         }
