@@ -141,6 +141,7 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.turbine)
                 implementation(libs.multiplatform.settings.test)
+                implementation(libs.koin.core)
             }
         }
         androidMain {
