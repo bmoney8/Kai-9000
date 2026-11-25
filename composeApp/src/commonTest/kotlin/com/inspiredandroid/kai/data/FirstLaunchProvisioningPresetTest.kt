@@ -6,6 +6,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FirstLaunchProvisioningPresetTest {
@@ -104,5 +105,67 @@ class FirstLaunchProvisioningPresetTest {
 
         assertEquals("", settings.getSoulText())
         assertEquals("", settings.getMcpServersJson())
+    }
+
+    @Test
+    fun `validation rejects empty services and missing gateway`() {
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(services = emptyList())
+        }.message?.contains("at least one service") ?: fail()
+
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(
+                services = listOf(PresetService(instanceId = "local", serviceId = Service.LiteRT.id)),
+            )
+        }.message?.contains("OpenAI-compatible gateway") ?: fail()
+
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(
+                services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "")),
+            )
+        }.message?.contains("base URLs must not be blank") ?: fail()
+    }
+
+    @Test
+    fun `validation rejects duplicate instance ids and blank MCP fields`() {
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(
+                services = listOf(
+                    PresetService(instanceId = "dup", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1"),
+                    PresetService(instanceId = "dup", serviceId = Service.LiteRT.id),
+                ),
+            )
+        }.message?.contains("instance ids must be unique") ?: fail()
+
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(
+                services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
+                mcpServers = listOf(
+                    McpServerConfig(id = "a", name = "A", url = "https://a.example/mcp"),
+                    McpServerConfig(id = "a", name = "B", url = "https://b.example/mcp"),
+                ),
+            )
+        }.message?.contains("MCP server ids must be unique") ?: fail()
+
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(
+                services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
+                mcpServers = listOf(McpServerConfig(id = "", name = "X", url = "https://x.example/mcp")),
+            )
+        }.message?.contains("MCP server ids must be unique") ?: fail()
+
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(
+                services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
+                mcpServers = listOf(McpServerConfig(id = "x", name = "", url = "https://x.example/mcp")),
+            )
+        }.message?.contains("MCP server") ?: fail()
+
+        assertFailsWith<IllegalArgumentException> {
+            FirstLaunchProvisioningPreset(
+                services = listOf(PresetService(instanceId = "gateway", serviceId = Service.OpenAICompatible.id, baseUrl = "https://a.example/v1")),
+                mcpServers = listOf(McpServerConfig(id = "x", name = "X", url = "http://x.example/mcp")),
+            )
+        }.message?.contains("HTTPS") ?: fail()
     }
 }
