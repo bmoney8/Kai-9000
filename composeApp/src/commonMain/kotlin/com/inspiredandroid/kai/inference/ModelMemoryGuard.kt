@@ -36,6 +36,41 @@ fun requiredModelMemoryBytes(
 fun hasEnoughMemory(availableBytes: Long, requiredBytes: Long): Boolean =
     availableBytes == Long.MAX_VALUE || (availableBytes >= 0L && availableBytes >= requiredBytes)
 
+/**
+ * JVM LiteRT allocation boundary. Reads available memory and calculates the model's complete
+ * load requirement before invoking the native engine allocation callback.
+ */
+inline fun <T> loadJvmLiteRtEngine(
+    modelBytes: Long,
+    acceleratorMemoryMb: Int,
+    contextTokens: Int,
+    kvBytesPerToken: Int,
+    availableMemory: () -> Long,
+    allocateNativeEngine: () -> T,
+): T = loadJvmEngineWithMemoryGuard(
+    availableBytes = availableMemory(),
+    requiredBytes = requiredModelMemoryBytes(modelBytes, acceleratorMemoryMb, contextTokens, kvBytesPerToken),
+    load = allocateNativeEngine,
+)
+
+/**
+ * iOS LiteRT allocation boundary. Reads available memory and calculates the model's complete
+ * load requirement before invoking the native bridge allocation callback.
+ */
+suspend inline fun <T> loadIosLiteRtEngine(
+    modelBytes: Long,
+    acceleratorMemoryMb: Int,
+    contextTokens: Int,
+    kvBytesPerToken: Int,
+    availableMemory: () -> Long,
+    allocateNativeBridge: suspend () -> T,
+): T {
+    val availableBytes = availableMemory()
+    val requiredBytes = requiredModelMemoryBytes(modelBytes, acceleratorMemoryMb, contextTokens, kvBytesPerToken)
+    if (!hasEnoughMemory(availableBytes, requiredBytes)) throw InsufficientMemoryException()
+    return allocateNativeBridge()
+}
+
 /** JVM-shared Android/desktop allocation seam; the callback is not invoked on rejection. */
 inline fun <T> loadJvmEngineWithMemoryGuard(availableBytes: Long, requiredBytes: Long, load: () -> T): T {
     if (!hasEnoughMemory(availableBytes, requiredBytes)) throw InsufficientMemoryException()

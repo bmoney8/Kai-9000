@@ -128,14 +128,10 @@ class LiteRTInferenceEngine : LocalInferenceEngine {
                     delay(GPU_DRAIN_DELAY_MS.milliseconds)
                 }
 
-                val availableMemory = getAvailableMemoryBytes()
                 val modelMetadata = findCatalogModelById(model.id)
-                val requiredMemory = requiredModelMemoryBytes(
-                    modelBytes = modelFile.length().coerceAtLeast(model.sizeBytes),
-                    acceleratorMemoryMb = modelMetadata?.gpuMemoryMb ?: 0,
-                    contextTokens = contextTokens,
-                    kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0,
-                )
+                val modelBytes = modelFile.length().coerceAtLeast(model.sizeBytes)
+                val acceleratorMemoryMb = modelMetadata?.gpuMemoryMb ?: 0
+                val kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0
                 fun initWithBackend(backend: Backend, maxTokens: Int?): Engine {
                     val config = EngineConfig(
                         modelPath = model.filePath,
@@ -151,7 +147,13 @@ class LiteRTInferenceEngine : LocalInferenceEngine {
                 val requestedTokens = if (contextTokens > 0) contextTokens else null
                 println("LiteRT: initializing model=${model.id} maxNumTokens=$requestedTokens")
 
-                val newEngine = loadJvmEngineWithMemoryGuard(availableMemory, requiredMemory) {
+                val newEngine = loadJvmLiteRtEngine(
+                    modelBytes = modelBytes,
+                    acceleratorMemoryMb = acceleratorMemoryMb,
+                    contextTokens = contextTokens,
+                    kvBytesPerToken = kvBytesPerToken,
+                    availableMemory = ::getAvailableMemoryBytes,
+                ) {
                     try {
                         try {
                             initWithBackend(Backend.GPU(), requestedTokens)
