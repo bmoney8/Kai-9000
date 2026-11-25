@@ -31,11 +31,8 @@ actual fun getModelStorageDirectory(): String = modelStorageDir
 
 actual fun getModelCacheDirectory(): String = modelCacheDir
 
-// iOS surfaces low-memory conditions via UIApplication.didReceiveMemoryWarning rather
-// than a queryable "available" value. Skip the pre-check (matches desktop) and rely on
-// the system warning + initialize() retry-with-CPU-backend path.
 actual fun getAvailableMemoryBytes(): Long =
-    os_proc_available_memory().takeIf { it > 0L } ?: Long.MAX_VALUE
+    iosAvailableMemoryBytes(os_proc_available_memory().toLong())
 
 @OptIn(ExperimentalForeignApi::class)
 actual fun getTotalMemoryBytes(): Long = NSProcessInfo.processInfo.physicalMemory.toLong()

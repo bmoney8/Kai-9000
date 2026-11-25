@@ -132,17 +132,16 @@ class IosLiteRTInferenceEngine : LocalInferenceEngine {
                 contextTokens = contextTokens,
                 kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0,
             )
-            if (!hasEnoughMemory(getAvailableMemoryBytes(), requiredMemory)) {
-                throw InsufficientMemoryException()
-            }
-
-            val errorMessage = suspendCancellableCoroutine<String?> { cont ->
-                bridge.initializeEngine(
-                    modelPath = model.filePath,
-                    cacheDir = getModelCacheDirectory(),
-                    maxNumTokens = contextTokens,
-                    onComplete = { msg -> if (cont.isActive) cont.resume(msg) },
-                )
+            val availableMemory = getAvailableMemoryBytes()
+            val errorMessage = loadIosBridgeWithMemoryGuard(availableMemory, requiredMemory) {
+                suspendCancellableCoroutine<String?> { cont ->
+                    bridge.initializeEngine(
+                        modelPath = model.filePath,
+                        cacheDir = getModelCacheDirectory(),
+                        maxNumTokens = contextTokens,
+                        onComplete = { msg -> if (cont.isActive) cont.resume(msg) },
+                    )
+                }
             }
             if (errorMessage != null) throw IllegalStateException(errorMessage)
 

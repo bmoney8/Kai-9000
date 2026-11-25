@@ -136,10 +136,6 @@ class LiteRTInferenceEngine : LocalInferenceEngine {
                     contextTokens = contextTokens,
                     kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0,
                 )
-                if (!hasEnoughMemory(availableMemory, requiredMemory)) {
-                    throw InsufficientMemoryException()
-                }
-
                 fun initWithBackend(backend: Backend, maxTokens: Int?): Engine {
                     val config = EngineConfig(
                         modelPath = model.filePath,
@@ -155,23 +151,25 @@ class LiteRTInferenceEngine : LocalInferenceEngine {
                 val requestedTokens = if (contextTokens > 0) contextTokens else null
                 println("LiteRT: initializing model=${model.id} maxNumTokens=$requestedTokens")
 
-                val newEngine = try {
+                val newEngine = loadJvmEngineWithMemoryGuard(availableMemory, requiredMemory) {
                     try {
-                        initWithBackend(Backend.GPU(), requestedTokens)
-                    } catch (e: Exception) {
-                        initWithBackend(Backend.CPU(), requestedTokens)
-                    }
-                } catch (e: Exception) {
-                    // Context size not supported — retry with model default
-                    println("LiteRT: init failed with maxNumTokens=$requestedTokens, falling back to default: ${e.message}")
-                    if (requestedTokens != null) {
                         try {
-                            initWithBackend(Backend.GPU(), null)
-                        } catch (e2: Exception) {
-                            initWithBackend(Backend.CPU(), null)
+                            initWithBackend(Backend.GPU(), requestedTokens)
+                        } catch (e: Exception) {
+                            initWithBackend(Backend.CPU(), requestedTokens)
                         }
-                    } else {
-                        throw e
+                    } catch (e: Exception) {
+                        // Context size not supported — retry with model default
+                        println("LiteRT: init failed with maxNumTokens=$requestedTokens, falling back to default: ${e.message}")
+                        if (requestedTokens != null) {
+                            try {
+                                initWithBackend(Backend.GPU(), null)
+                            } catch (e2: Exception) {
+                                initWithBackend(Backend.CPU(), null)
+                            }
+                        } else {
+                            throw e
+                        }
                     }
                 }
 

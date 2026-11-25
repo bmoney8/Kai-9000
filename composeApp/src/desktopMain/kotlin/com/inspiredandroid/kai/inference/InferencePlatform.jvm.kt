@@ -8,18 +8,13 @@ actual fun getModelStorageDirectory(): String = getAppFilesDirectory() + "/liter
 actual fun getModelCacheDirectory(): String = System.getProperty("java.io.tmpdir") ?: getAppFilesDirectory()
 
 private val operatingSystemBean = java.lang.management.ManagementFactory.getOperatingSystemMXBean()
+private val extendedOperatingSystemBean = operatingSystemBean as? com.sun.management.OperatingSystemMXBean
 
 actual fun getAvailableMemoryBytes(): Long =
-    (operatingSystemBean as? com.sun.management.OperatingSystemMXBean)
-        ?.freeMemorySize
-        ?.takeIf { it >= 0L }
-        ?: Long.MAX_VALUE
+    desktopAvailableMemoryBytes(extendedOperatingSystemBean?.freeMemorySize)
 
 actual fun getTotalMemoryBytes(): Long =
-    (operatingSystemBean as? com.sun.management.OperatingSystemMXBean)
-        ?.totalMemorySize
-        ?.takeIf { it > 0L }
-        ?: Long.MAX_VALUE
+    desktopTotalMemoryBytes(extendedOperatingSystemBean?.totalMemorySize)
 
 actual fun getAvailableDiskSpaceBytes(path: String): Long {
     var dir = File(path)

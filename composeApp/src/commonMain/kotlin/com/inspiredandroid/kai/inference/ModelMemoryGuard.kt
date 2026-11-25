@@ -3,6 +3,10 @@ package com.inspiredandroid.kai.inference
 /** Fixed allowance for runtime, allocator fragmentation, and other concurrent app work. */
 const val MODEL_LOAD_SAFETY_MARGIN_BYTES: Long = 512L * 1024 * 1024
 
+/** Normalize a platform memory reading, preserving the unbounded sentinel only for invalid data. */
+fun finiteMemoryOrUnknown(value: Long, zeroIsValid: Boolean = false): Long =
+    value.takeIf { if (zeroIsValid) it >= 0L else it > 0L } ?: Long.MAX_VALUE
+
 /**
  * Estimates memory needed to load and run a model: resident model weights, configured
  * accelerator allocation, context/KV working set, and a fixed safety margin.
@@ -29,6 +33,24 @@ fun requiredModelMemoryBytes(
     return saturatedAdd(saturatedAdd(saturatedAdd(model, accelerator), context), safetyMarginBytes.coerceAtLeast(0L))
 }
 
-/** Unknown memory is the only case in which the guard deliberately allows loading. */
 fun hasEnoughMemory(availableBytes: Long, requiredBytes: Long): Boolean =
     availableBytes == Long.MAX_VALUE || (availableBytes >= 0L && availableBytes >= requiredBytes)
+
+/** JVM-shared Android/desktop allocation seam; the callback is not invoked on rejection. */
+inline fun <T> loadJvmEngineWithMemoryGuard(availableBytes: Long, requiredBytes: Long, load: () -> T): T {
+    if (!hasEnoughMemory(availableBytes, requiredBytes)) throw InsufficientMemoryException()
+    return load()
+}
+
+/** iOS bridge seam; rejects before native allocation begins. */
+inline fun <T> loadIosBridgeWithMemoryGuard(availableBytes: Long, requiredBytes: Long, load: () -> T): T {
+    if (!hasEnoughMemory(availableBytes, requiredBytes)) throw InsufficientMemoryException()
+    return load()
+}
+
+fun iosAvailableMemoryBytes(rawValue: Long): Long = finiteMemoryOrUnknown(rawValue)
+
+fun desktopAvailableMemoryBytes(value: Long?): Long =
+    finiteMemoryOrUnknown(value ?: -1L, zeroIsValid = true)
+
+fun desktopTotalMemoryBytes(value: Long?): Long = finiteMemoryOrUnknown(value ?: -1L)
