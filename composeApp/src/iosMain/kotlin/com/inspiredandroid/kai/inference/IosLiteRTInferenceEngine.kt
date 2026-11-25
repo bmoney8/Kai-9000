@@ -126,14 +126,16 @@ class IosLiteRTInferenceEngine : LocalInferenceEngine {
             delay(GPU_DRAIN_DELAY_MS.milliseconds)
 
             val modelMetadata = findCatalogModelById(model.id)
-            val requiredMemory = requiredModelMemoryBytes(
-                modelBytes = model.sizeBytes.coerceAtLeast(PlatformFile(model.filePath).size()),
-                acceleratorMemoryMb = modelMetadata?.gpuMemoryMb ?: 0,
+            val modelBytes = model.sizeBytes.coerceAtLeast(PlatformFile(model.filePath).size())
+            val acceleratorMemoryMb = modelMetadata?.gpuMemoryMb ?: 0
+            val kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0
+            val errorMessage = loadIosLiteRtEngine(
+                modelBytes = modelBytes,
+                acceleratorMemoryMb = acceleratorMemoryMb,
                 contextTokens = contextTokens,
-                kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0,
-            )
-            val availableMemory = getAvailableMemoryBytes()
-            val errorMessage = loadIosBridgeWithMemoryGuard(availableMemory, requiredMemory) {
+                kvBytesPerToken = kvBytesPerToken,
+                availableMemory = ::getAvailableMemoryBytes,
+            ) {
                 suspendCancellableCoroutine<String?> { cont ->
                     bridge.initializeEngine(
                         modelPath = model.filePath,
