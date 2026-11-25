@@ -830,11 +830,9 @@ class RemoteDataRepository(
         } else {
             entries
         }
-        // On-device models are only tried as the primary service, never as a fallback
-        // target — falling into one would silently start a heavy model load the user
-        // didn't ask for (mirrors the guard that keeps on-device errors from silently
-        // falling back to cloud services).
-        return ordered.filterIndexed { index, entry -> index == 0 || !entry.service.isOnDevice }
+        // On-device models are allowed in the fallback chain when localInferenceEngine is available.
+        // The inclusion filter at line 822 already ensures they only appear when the engine is ready.
+        return ordered
     }
 
     override suspend fun ask(question: String?, files: List<PlatformFile>, uiSubmission: UiSubmission?, activeSkillId: String?) {
