@@ -391,6 +391,14 @@ class FakeDataRepository : DataRepository {
         dynamicUiEnabled = enabled
     }
 
+    private var adminModeEnabled: Boolean = false
+
+    override fun isAdminModeEnabled(): Boolean = adminModeEnabled
+
+    override fun setAdminModeEnabled(enabled: Boolean) {
+        adminModeEnabled = enabled
+    }
+
     private var themeMode: ThemeMode = ThemeMode.System
 
     override fun getThemeMode(): ThemeMode = themeMode

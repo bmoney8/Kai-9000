@@ -66,6 +66,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -91,6 +93,10 @@ import kai.composeapp.generated.resources.settings_tab_integrations
 import kai.composeapp.generated.resources.settings_tab_sandbox
 import kai.composeapp.generated.resources.settings_tab_services
 import kai.composeapp.generated.resources.settings_tab_tools
+import kai.composeapp.generated.resources.settings_admin_mode
+import kai.composeapp.generated.resources.settings_admin_mode_description
+import kai.composeapp.generated.resources.settings_customer_mode
+import kai.composeapp.generated.resources.settings_customer_mode_description
 import kai.composeapp.generated.resources.settings_version
 import kai.composeapp.generated.resources.snackbar_email_removed
 import kai.composeapp.generated.resources.snackbar_mcp_server_removed
@@ -237,9 +243,14 @@ fun SettingsScreenContent(
                 TopBar(onNavigateBack = onNavigateBack)
             }
 
-            val visibleTabs = remember(sandboxState.showSandbox) {
-                SettingsTab.entries.filter { it != SettingsTab.Sandbox || sandboxState.showSandbox }.toImmutableList()
+            val visibleTabs = remember(filteredUiState.isAdminMode, sandboxState.showSandbox) {
+                visibleSettingsTabs(filteredUiState.isAdminMode, sandboxState.showSandbox).toImmutableList()
             }
+
+            AdminModeToggle(
+                isAdminMode = filteredUiState.isAdminMode,
+                onToggleAdminMode = actions.onToggleAdminMode,
+            )
 
             SettingsTabSelector(
                 tabs = visibleTabs,
@@ -363,6 +374,39 @@ private fun TopBar(onNavigateBack: () -> Unit) {
 }
 
 @Composable
+private fun AdminModeToggle(
+    isAdminMode: Boolean,
+    onToggleAdminMode: (Boolean) -> Unit,
+) {
+    val adminModeLabel = stringResource(Res.string.settings_admin_mode)
+    SettingsCard(
+        modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        innerPadding = false,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(if (isAdminMode) Res.string.settings_admin_mode else Res.string.settings_customer_mode),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(if (isAdminMode) Res.string.settings_admin_mode_description else Res.string.settings_customer_mode_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = isAdminMode,
+                onCheckedChange = onToggleAdminMode,
+                modifier = Modifier.semantics { contentDescription = adminModeLabel },
+            )
+        }
+    }
+}
+
 private fun SettingsTabSelector(
     tabs: ImmutableList<SettingsTab>,
     currentTab: SettingsTab,

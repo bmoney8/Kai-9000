@@ -76,73 +76,79 @@ class SettingsViewModel(
     private var hasCheckedInitialConnection = false
     private var pendingDeleteJob: Job? = null
 
-    private fun buildFullState(): SettingsUiState = SettingsUiState(
-        configuredServices = buildConfiguredServiceEntries().toImmutableList(),
-        availableServicesToAdd = computeAvailableServices().toImmutableList(),
-        tools = dataRepository.getToolDefinitions().toImmutableList(),
-        soulText = dataRepository.getSoulText(),
-        isDynamicUiEnabled = dataRepository.isDynamicUiEnabled(),
-        themeMode = dataRepository.getThemeMode(),
-        isMemoryEnabled = dataRepository.isMemoryEnabled(),
-        memories = dataRepository.getMemories().toImmutableList(),
-        isSchedulingEnabled = dataRepository.isSchedulingEnabled(),
-        scheduledTasks = dataRepository.getScheduledTasks().toImmutableList(),
-        isDaemonEnabled = dataRepository.isDaemonEnabled(),
-        showDaemonToggle = currentPlatform is Platform.Mobile.Android,
-        isHeartbeatEnabled = dataRepository.getHeartbeatConfig().enabled,
-        heartbeatIntervalMinutes = dataRepository.getHeartbeatConfig().intervalMinutes,
-        heartbeatActiveHoursStart = dataRepository.getHeartbeatConfig().activeHoursStart,
-        heartbeatActiveHoursEnd = dataRepository.getHeartbeatConfig().activeHoursEnd,
-        heartbeatPrompt = dataRepository.getHeartbeatPrompt(),
-        heartbeatLog = dataRepository.getHeartbeatLog().toImmutableList(),
-        heartbeatServiceEntries = dataRepository.getServiceEntries()
-            .filter { supportsAgenticFlows(it.serviceId, it.modelId) }
-            .toImmutableList(),
-        heartbeatSelectedInstanceId = dataRepository.getHeartbeatInstanceId()?.takeIf { id ->
-            dataRepository.getServiceEntries().any { it.instanceId == id }
-        }.also { validId ->
-            val savedId = dataRepository.getHeartbeatInstanceId()
-            if (savedId != null && validId == null) dataRepository.setHeartbeatInstanceId(null)
-        },
-        isEmailEnabled = dataRepository.isEmailEnabled(),
-        showEmailToggle = isEmailSupported,
-        emailAccounts = dataRepository.getEmailAccounts().toImmutableList(),
-        emailPollIntervalMinutes = dataRepository.getEmailPollIntervalMinutes(),
-        emailPendingCount = dataRepository.getPendingEmailCount(),
-        emailSyncStates = dataRepository.getEmailSyncStates().toImmutableMap(),
-        showSmsSection = isSmsSupported,
-        isSmsEnabled = dataRepository.isSmsEnabled(),
-        smsPermissionGranted = dataRepository.hasSmsPermission(),
-        smsPollIntervalMinutes = dataRepository.getSmsPollIntervalMinutes(),
-        smsPendingCount = dataRepository.getPendingSmsCount(),
-        smsSyncState = dataRepository.getSmsSyncState(),
-        isSmsSendEnabled = dataRepository.isSmsSendEnabled(),
-        smsSendPermissionGranted = dataRepository.hasSmsSendPermission(),
-        showNotificationsSection = isNotificationsSupported,
-        isNotificationsEnabled = dataRepository.isNotificationsEnabled(),
-        notificationListenerAccessGranted = dataRepository.isNotificationListenerAccessGranted(),
-        notificationListenerBound = dataRepository.getNotificationSyncState().listenerBound,
-        notificationPendingCount = dataRepository.getPendingNotificationCount(),
-        isFreeFallbackEnabled = dataRepository.isFreeFallbackEnabled(),
-        uiScale = dataRepository.getUiScale(),
-        showUiScale = currentPlatform is Platform.Desktop,
-        mcpServers = buildMcpServerEntries().toImmutableList(),
-        skills = dataRepository.getInstalledSkills().toImmutableList(),
-        localAvailableModels = dataRepository.getLocalAvailableModels().toImmutableList(),
-        localImportedModels = dataRepository.getLocalImportedModels().toImmutableList(),
-        totalDeviceMemoryBytes = dataRepository.getTotalDeviceMemoryBytes(),
-        localFreeSpaceBytes = dataRepository.getLocalFreeSpaceBytes(),
-        localDownloadingModelId = dataRepository.getLocalDownloadingModelId()?.value,
-        localDownloadProgress = dataRepository.getLocalDownloadProgress()?.value,
-        localImportingFileName = dataRepository.getLocalImportingFileName()?.value,
-        localImportProgress = dataRepository.getLocalImportProgress()?.value,
-        modelContextTokens = buildModelContextTokensMap(),
-    )
+    private fun buildFullState(): SettingsUiState {
+        val isAdminMode = dataRepository.isAdminModeEnabled()
+        return SettingsUiState(
+            currentTab = if (isAdminMode) SettingsTab.Services else SettingsTab.General,
+            isAdminMode = isAdminMode,
+            configuredServices = buildConfiguredServiceEntries().toImmutableList(),
+            availableServicesToAdd = computeAvailableServices().toImmutableList(),
+            tools = dataRepository.getToolDefinitions().toImmutableList(),
+            soulText = dataRepository.getSoulText(),
+            isDynamicUiEnabled = dataRepository.isDynamicUiEnabled(),
+            themeMode = dataRepository.getThemeMode(),
+            isMemoryEnabled = dataRepository.isMemoryEnabled(),
+            memories = dataRepository.getMemories().toImmutableList(),
+            isSchedulingEnabled = dataRepository.isSchedulingEnabled(),
+            scheduledTasks = dataRepository.getScheduledTasks().toImmutableList(),
+            isDaemonEnabled = dataRepository.isDaemonEnabled(),
+            showDaemonToggle = currentPlatform is Platform.Mobile.Android,
+            isHeartbeatEnabled = dataRepository.getHeartbeatConfig().enabled,
+            heartbeatIntervalMinutes = dataRepository.getHeartbeatConfig().intervalMinutes,
+            heartbeatActiveHoursStart = dataRepository.getHeartbeatConfig().activeHoursStart,
+            heartbeatActiveHoursEnd = dataRepository.getHeartbeatConfig().activeHoursEnd,
+            heartbeatPrompt = dataRepository.getHeartbeatPrompt(),
+            heartbeatLog = dataRepository.getHeartbeatLog().toImmutableList(),
+            heartbeatServiceEntries = dataRepository.getServiceEntries()
+                .filter { supportsAgenticFlows(it.serviceId, it.modelId) }
+                .toImmutableList(),
+            heartbeatSelectedInstanceId = dataRepository.getHeartbeatInstanceId()?.takeIf { id ->
+                dataRepository.getServiceEntries().any { it.instanceId == id }
+            }.also { validId ->
+                val savedId = dataRepository.getHeartbeatInstanceId()
+                if (savedId != null && validId == null) dataRepository.setHeartbeatInstanceId(null)
+            },
+            isEmailEnabled = dataRepository.isEmailEnabled(),
+            showEmailToggle = isEmailSupported,
+            emailAccounts = dataRepository.getEmailAccounts().toImmutableList(),
+            emailPollIntervalMinutes = dataRepository.getEmailPollIntervalMinutes(),
+            emailPendingCount = dataRepository.getPendingEmailCount(),
+            emailSyncStates = dataRepository.getEmailSyncStates().toImmutableMap(),
+            showSmsSection = isSmsSupported,
+            isSmsEnabled = dataRepository.isSmsEnabled(),
+            smsPermissionGranted = dataRepository.hasSmsPermission(),
+            smsPollIntervalMinutes = dataRepository.getSmsPollIntervalMinutes(),
+            smsPendingCount = dataRepository.getPendingSmsCount(),
+            smsSyncState = dataRepository.getSmsSyncState(),
+            isSmsSendEnabled = dataRepository.isSmsSendEnabled(),
+            smsSendPermissionGranted = dataRepository.hasSmsSendPermission(),
+            showNotificationsSection = isNotificationsSupported,
+            isNotificationsEnabled = dataRepository.isNotificationsEnabled(),
+            notificationListenerAccessGranted = dataRepository.isNotificationListenerAccessGranted(),
+            notificationListenerBound = dataRepository.getNotificationSyncState().listenerBound,
+            notificationPendingCount = dataRepository.getPendingNotificationCount(),
+            isFreeFallbackEnabled = dataRepository.isFreeFallbackEnabled(),
+            uiScale = dataRepository.getUiScale(),
+            showUiScale = currentPlatform is Platform.Desktop,
+            mcpServers = buildMcpServerEntries().toImmutableList(),
+            skills = dataRepository.getInstalledSkills().toImmutableList(),
+            localAvailableModels = dataRepository.getLocalAvailableModels().toImmutableList(),
+            localImportedModels = dataRepository.getLocalImportedModels().toImmutableList(),
+            totalDeviceMemoryBytes = dataRepository.getTotalDeviceMemoryBytes(),
+            localFreeSpaceBytes = dataRepository.getLocalFreeSpaceBytes(),
+            localDownloadingModelId = dataRepository.getLocalDownloadingModelId()?.value,
+            localDownloadProgress = dataRepository.getLocalDownloadProgress()?.value,
+            localImportingFileName = dataRepository.getLocalImportingFileName()?.value,
+            localImportProgress = dataRepository.getLocalImportProgress()?.value,
+            modelContextTokens = buildModelContextTokensMap(),
+        )
+    }
 
     // Bound once so downstream Compose skipping works — a new SettingsActions
     // instance on every state emission would defeat it.
     val actions: SettingsActions = SettingsActions(
         onSelectTab = ::onSelectTab,
+        onToggleAdminMode = ::onToggleAdminMode,
         onAddService = ::onAddService,
         onRemoveService = ::onRemoveService,
         onReorderServices = ::onReorderServices,
@@ -357,6 +363,17 @@ class SettingsViewModel(
             current.copy(
                 configuredServices = newEntries.toImmutableList(),
                 availableServicesToAdd = computeAvailableServices().toImmutableList(),
+            )
+        }
+    }
+
+    private fun onToggleAdminMode(enabled: Boolean) {
+        dataRepository.setAdminModeEnabled(enabled)
+        _state.update { current ->
+            val visibleTabs = visibleSettingsTabs(enabled, showSandbox = currentPlatform is Platform.Mobile.Android)
+            current.copy(
+                isAdminMode = enabled,
+                currentTab = current.currentTab.takeIf { it in visibleTabs } ?: visibleTabs.first(),
             )
         }
     }

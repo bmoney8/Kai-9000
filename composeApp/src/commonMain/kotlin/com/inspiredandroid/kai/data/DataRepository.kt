@@ -113,6 +113,10 @@ interface DataRepository {
     fun isDynamicUiEnabled(): Boolean
     fun setDynamicUiEnabled(enabled: Boolean)
 
+    // Settings access mode
+    fun isAdminModeEnabled(): Boolean
+    fun setAdminModeEnabled(enabled: Boolean)
+
     // Theme mode
     fun getThemeMode(): ThemeMode
     fun setThemeMode(mode: ThemeMode)
