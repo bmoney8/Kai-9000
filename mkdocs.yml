@@ -34,6 +34,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - First-launch Product Provisioning: features/first-launch-provisioning.md
   - Features:
     - Chat & Conversations: features/chat.md
     - Multi-Service: features/multi-service.md

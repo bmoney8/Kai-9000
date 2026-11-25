@@ -5,6 +5,8 @@ import com.inspiredandroid.kai.data.ConversationStorage
 import com.inspiredandroid.kai.data.DataRepository
 import com.inspiredandroid.kai.data.EmailStore
 import com.inspiredandroid.kai.data.HeartbeatManager
+import com.inspiredandroid.kai.data.ProductBuildProvisioningPreset
+import com.inspiredandroid.kai.data.applyFirstLaunchProvisioningPreset
 import com.inspiredandroid.kai.data.MemoryStore
 import com.inspiredandroid.kai.data.NotificationStore
 import com.inspiredandroid.kai.data.RemoteDataRepository
@@ -57,8 +59,16 @@ val appModule = module {
     single<NotificationListenerController> { NotificationListenerController() }
     single<NotificationReader> { NotificationReader() }
     single<AppSettings> {
-        AppSettings(createSecureSettings()).also {
-            it.runMigrations(createLegacySettings())
+        val persistentSettings = createSecureSettings()
+        val legacySettings = createLegacySettings()
+        val isFreshInstallation = persistentSettings.keys.isEmpty() &&
+            (legacySettings == null || legacySettings.keys.isEmpty())
+        AppSettings(persistentSettings).also {
+            it.runMigrations(legacySettings)
+            it.applyFirstLaunchProvisioningPreset(
+                preset = ProductBuildProvisioningPreset.preset,
+                isFreshInstallation = isFreshInstallation,
+            )
         }
     }
     single<Requests> {
