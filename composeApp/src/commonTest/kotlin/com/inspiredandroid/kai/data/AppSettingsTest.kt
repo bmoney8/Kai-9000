@@ -256,5 +256,9 @@ class AppSettingsTest {
             listOf(Service.OpenAICompatible.id, Service.LiteRT.id),
             chain.map { it.service.id },
         )
+        assertEquals(
+            listOf("remote", "litert"),
+            chain.map { it.instanceId },
+        )
     }
 }
