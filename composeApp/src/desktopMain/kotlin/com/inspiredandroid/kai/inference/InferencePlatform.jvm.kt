@@ -7,9 +7,19 @@ actual fun getModelStorageDirectory(): String = getAppFilesDirectory() + "/liter
 
 actual fun getModelCacheDirectory(): String = System.getProperty("java.io.tmpdir") ?: getAppFilesDirectory()
 
-actual fun getAvailableMemoryBytes(): Long = Long.MAX_VALUE // Desktop OSes manage memory via swap and cache eviction; skip the check
+private val operatingSystemBean = java.lang.management.ManagementFactory.getOperatingSystemMXBean()
 
-actual fun getTotalMemoryBytes(): Long = Long.MAX_VALUE
+actual fun getAvailableMemoryBytes(): Long =
+    (operatingSystemBean as? com.sun.management.OperatingSystemMXBean)
+        ?.freeMemorySize
+        ?.takeIf { it >= 0L }
+        ?: Long.MAX_VALUE
+
+actual fun getTotalMemoryBytes(): Long =
+    (operatingSystemBean as? com.sun.management.OperatingSystemMXBean)
+        ?.totalMemorySize
+        ?.takeIf { it > 0L }
+        ?: Long.MAX_VALUE
 
 actual fun getAvailableDiskSpaceBytes(path: String): Long {
     var dir = File(path)

@@ -128,8 +128,15 @@ class LiteRTInferenceEngine : LocalInferenceEngine {
                     delay(GPU_DRAIN_DELAY_MS.milliseconds)
                 }
 
-                val availMem = getAvailableMemoryBytes()
-                if (availMem < MIN_MEMORY_HEADROOM_BYTES) {
+                val availableMemory = getAvailableMemoryBytes()
+                val modelMetadata = findCatalogModelById(model.id)
+                val requiredMemory = requiredModelMemoryBytes(
+                    modelBytes = modelFile.length().coerceAtLeast(model.sizeBytes),
+                    acceleratorMemoryMb = modelMetadata?.gpuMemoryMb ?: 0,
+                    contextTokens = contextTokens,
+                    kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0,
+                )
+                if (!hasEnoughMemory(availableMemory, requiredMemory)) {
                     throw InsufficientMemoryException()
                 }
 
