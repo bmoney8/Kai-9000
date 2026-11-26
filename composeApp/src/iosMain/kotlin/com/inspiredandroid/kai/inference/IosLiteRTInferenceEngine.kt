@@ -125,13 +125,25 @@ class IosLiteRTInferenceEngine : LocalInferenceEngine {
             bridge.releaseEngine()
             delay(GPU_DRAIN_DELAY_MS.milliseconds)
 
-            val errorMessage = suspendCancellableCoroutine<String?> { cont ->
-                bridge.initializeEngine(
-                    modelPath = model.filePath,
-                    cacheDir = getModelCacheDirectory(),
-                    maxNumTokens = contextTokens,
-                    onComplete = { msg -> if (cont.isActive) cont.resume(msg) },
-                )
+            val modelMetadata = findCatalogModelById(model.id)
+            val modelBytes = model.sizeBytes.coerceAtLeast(PlatformFile(model.filePath).size())
+            val acceleratorMemoryMb = modelMetadata?.gpuMemoryMb ?: 0
+            val kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0
+            val errorMessage = loadIosLiteRtEngine(
+                modelBytes = modelBytes,
+                acceleratorMemoryMb = acceleratorMemoryMb,
+                contextTokens = contextTokens,
+                kvBytesPerToken = kvBytesPerToken,
+                availableMemory = ::getAvailableMemoryBytes,
+            ) {
+                suspendCancellableCoroutine<String?> { cont ->
+                    bridge.initializeEngine(
+                        modelPath = model.filePath,
+                        cacheDir = getModelCacheDirectory(),
+                        maxNumTokens = contextTokens,
+                        onComplete = { msg -> if (cont.isActive) cont.resume(msg) },
+                    )
+                }
             }
             if (errorMessage != null) throw IllegalStateException(errorMessage)
 

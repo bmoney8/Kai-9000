@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     // this is necessary to avoid the plugins to be loaded multiple times
     // in each subproject's classloader
@@ -29,5 +31,11 @@ configure<com.diffplug.gradle.spotless.SpotlessExtension> {
     kotlinGradle {
         target("**/*.gradle.kts")
         ktlint()
+    }
+}
+
+allprojects {
+    tasks.withType<Test>().configureEach {
+        dependsOn(rootProject.tasks.named("spotlessCheck"))
     }
 }

@@ -45,6 +45,45 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `admin mode defaults to customer mode and toggle persists in repository`() = runTest {
+        val viewModel = SettingsViewModel(fakeRepository, fakeDaemonController, fakeNotificationPermissionController, noOpScheduler, testDispatcher)
+
+        assertFalse(viewModel.state.value.isAdminMode)
+        viewModel.actions.onToggleAdminMode(true)
+        assertTrue(viewModel.state.value.isAdminMode)
+        assertTrue(fakeRepository.isAdminModeEnabled())
+        viewModel.actions.onSelectTab(SettingsTab.Tools)
+
+        viewModel.actions.onToggleAdminMode(false)
+        assertFalse(viewModel.state.value.isAdminMode)
+        assertEquals(SettingsTab.General, viewModel.state.value.currentTab)
+        assertFalse(fakeRepository.isAdminModeEnabled())
+    }
+
+    @Test
+    fun `initial state restores saved admin mode`() {
+        fakeRepository.setAdminModeEnabled(true)
+
+        val viewModel = SettingsViewModel(fakeRepository, fakeDaemonController, fakeNotificationPermissionController, noOpScheduler, testDispatcher)
+
+        assertTrue(viewModel.state.value.isAdminMode)
+        assertEquals(SettingsTab.Services, viewModel.state.value.currentTab)
+    }
+
+    @Test
+    fun `customer mode only exposes general and agent tabs`() {
+        assertEquals(
+            listOf(SettingsTab.General, SettingsTab.Agent),
+            visibleSettingsTabs(isAdminMode = false, showSandbox = true),
+        )
+        assertEquals(
+            SettingsTab.entries,
+            visibleSettingsTabs(isAdminMode = true, showSandbox = true),
+        )
+        assertTrue(SettingsTab.Sandbox !in visibleSettingsTabs(isAdminMode = true, showSandbox = false))
+    }
+
+    @Test
     fun `initial state has empty configured services when none configured`() = runTest {
         val viewModel = SettingsViewModel(fakeRepository, fakeDaemonController, fakeNotificationPermissionController, noOpScheduler, testDispatcher)
 

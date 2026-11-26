@@ -11,6 +11,7 @@ import io.github.vinceglb.filekit.PlatformFile
 @Immutable
 data class SettingsActions(
     val onSelectTab: (SettingsTab) -> Unit,
+    val onToggleAdminMode: (Boolean) -> Unit,
     val onAddService: (Service) -> Unit,
     val onRemoveService: (String) -> Unit,
     val onReorderServices: (List<String>) -> Unit,
@@ -76,6 +77,7 @@ data class SettingsActions(
     companion object {
         val NoOp = SettingsActions(
             onSelectTab = {},
+            onToggleAdminMode = {},
             onAddService = {},
             onRemoveService = {},
             onReorderServices = {},

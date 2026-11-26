@@ -9,6 +9,19 @@ import kotlin.test.assertTrue
 class AppSettingsTest {
 
     @Test
+    fun `admin mode defaults off and persists selection`() {
+        val settings = MapSettings()
+        val firstInstance = AppSettings(settings)
+
+        assertFalse(firstInstance.isAdminModeEnabled())
+        firstInstance.setAdminModeEnabled(true)
+
+        assertTrue(AppSettings(settings).isAdminModeEnabled())
+        firstInstance.setAdminModeEnabled(false)
+        assertFalse(AppSettings(settings).isAdminModeEnabled())
+    }
+
+    @Test
     fun `migration only runs once so deleted services stay deleted`() {
         val settings = MapSettings()
         val appSettings = AppSettings(settings)
@@ -259,5 +272,27 @@ class AppSettingsTest {
         appSettings.removeInstanceSettings(instanceId)
         assertEquals("", appSettings.getInstanceImageModelId(instanceId))
         assertEquals("", appSettings.getInstanceModelId(instanceId))
+    }
+
+    @Test
+    fun `on-device provider remains after remote provider in fallback order`() {
+        val chain = buildFallbackChain(
+            instances = listOf(
+                ServiceInstance("remote", Service.OpenAICompatible.id),
+                ServiceInstance("litert", Service.LiteRT.id),
+            ),
+            isFreeServicePrimary = false,
+            isFreeFallbackEnabled = false,
+            hasLocalInferenceEngine = true,
+        )
+
+        assertEquals(
+            listOf(Service.OpenAICompatible.id, Service.LiteRT.id),
+            chain.map { it.service.id },
+        )
+        assertEquals(
+            listOf("remote", "litert"),
+            chain.map { it.instanceId },
+        )
     }
 }

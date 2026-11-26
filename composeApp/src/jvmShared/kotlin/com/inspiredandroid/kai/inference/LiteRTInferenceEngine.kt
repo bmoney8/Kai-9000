@@ -128,11 +128,10 @@ class LiteRTInferenceEngine : LocalInferenceEngine {
                     delay(GPU_DRAIN_DELAY_MS.milliseconds)
                 }
 
-                val availMem = getAvailableMemoryBytes()
-                if (availMem < MIN_MEMORY_HEADROOM_BYTES) {
-                    throw InsufficientMemoryException()
-                }
-
+                val modelMetadata = findCatalogModelById(model.id)
+                val modelBytes = modelFile.length().coerceAtLeast(model.sizeBytes)
+                val acceleratorMemoryMb = modelMetadata?.gpuMemoryMb ?: 0
+                val kvBytesPerToken = modelMetadata?.kvPerTokenBytes ?: 0
                 fun initWithBackend(backend: Backend, maxTokens: Int?): Engine {
                     val config = EngineConfig(
                         modelPath = model.filePath,
@@ -148,23 +147,31 @@ class LiteRTInferenceEngine : LocalInferenceEngine {
                 val requestedTokens = if (contextTokens > 0) contextTokens else null
                 println("LiteRT: initializing model=${model.id} maxNumTokens=$requestedTokens")
 
-                val newEngine = try {
+                val newEngine = loadJvmLiteRtEngine(
+                    modelBytes = modelBytes,
+                    acceleratorMemoryMb = acceleratorMemoryMb,
+                    contextTokens = contextTokens,
+                    kvBytesPerToken = kvBytesPerToken,
+                    availableMemory = ::getAvailableMemoryBytes,
+                ) {
                     try {
-                        initWithBackend(Backend.GPU(), requestedTokens)
-                    } catch (e: Exception) {
-                        initWithBackend(Backend.CPU(), requestedTokens)
-                    }
-                } catch (e: Exception) {
-                    // Context size not supported — retry with model default
-                    println("LiteRT: init failed with maxNumTokens=$requestedTokens, falling back to default: ${e.message}")
-                    if (requestedTokens != null) {
                         try {
-                            initWithBackend(Backend.GPU(), null)
-                        } catch (e2: Exception) {
-                            initWithBackend(Backend.CPU(), null)
+                            initWithBackend(Backend.GPU(), requestedTokens)
+                        } catch (e: Exception) {
+                            initWithBackend(Backend.CPU(), requestedTokens)
                         }
-                    } else {
-                        throw e
+                    } catch (e: Exception) {
+                        // Context size not supported — retry with model default
+                        println("LiteRT: init failed with maxNumTokens=$requestedTokens, falling back to default: ${e.message}")
+                        if (requestedTokens != null) {
+                            try {
+                                initWithBackend(Backend.GPU(), null)
+                            } catch (e2: Exception) {
+                                initWithBackend(Backend.CPU(), null)
+                            }
+                        } else {
+                            throw e
+                        }
                     }
                 }
 

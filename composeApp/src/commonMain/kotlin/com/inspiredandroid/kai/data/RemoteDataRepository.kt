@@ -26,7 +26,6 @@ import com.inspiredandroid.kai.inference.getTotalMemoryBytes
 import com.inspiredandroid.kai.linux.LinuxDistro
 import com.inspiredandroid.kai.mcp.McpServerConfig
 import com.inspiredandroid.kai.mcp.McpServerManager
-import com.inspiredandroid.kai.network.AllServicesFailedException
 import com.inspiredandroid.kai.network.AnthropicInsufficientCreditsException
 import com.inspiredandroid.kai.network.AnthropicInvalidApiKeyException
 import com.inspiredandroid.kai.network.ContextWindowExceededException
@@ -832,29 +831,12 @@ class RemoteDataRepository(
         return true // Optional API key services are always valid
     }
 
-    private data class FallbackEntry(val instanceId: String, val service: Service)
-
-    private fun getOrderedFallbackEntries(): List<FallbackEntry> {
-        val instances = getConfiguredServiceInstances()
-        val entries = instances.map { FallbackEntry(instanceId = it.instanceId, service = Service.fromId(it.serviceId)) }
-            .filter { it.service != Service.Free }
-            .filter { !it.service.isOnDevice || localInferenceEngine != null }
-        val freeEntry = FallbackEntry(instanceId = "free", service = Service.Free)
-        val ordered = if (entries.isEmpty()) {
-            listOf(freeEntry)
-        } else if (appSettings.isFreeServicePrimary()) {
-            listOf(freeEntry) + entries
-        } else if (appSettings.isFreeFallbackEnabled()) {
-            entries + freeEntry
-        } else {
-            entries
-        }
-        // On-device models are only tried as the primary service, never as a fallback
-        // target — falling into one would silently start a heavy model load the user
-        // didn't ask for (mirrors the guard that keeps on-device errors from silently
-        // falling back to cloud services).
-        return ordered.filterIndexed { index, entry -> index == 0 || !entry.service.isOnDevice }
-    }
+    private fun getOrderedFallbackEntries(): List<FallbackEntry> = buildFallbackChain(
+        instances = getConfiguredServiceInstances(),
+        isFreeServicePrimary = appSettings.isFreeServicePrimary(),
+        isFreeFallbackEnabled = appSettings.isFreeFallbackEnabled(),
+        hasLocalInferenceEngine = localInferenceEngine != null,
+    )
 
     override suspend fun ask(question: String?, files: List<PlatformFile>, uiSubmission: UiSubmission?, activeSkillId: String?) {
         // The active skill (if any) is consumed for this single turn only — stored in a
@@ -967,72 +949,54 @@ class RemoteDataRepository(
 
         val historyChars = messages.sumOf { it.content.length } + (systemPrompt?.length ?: 0)
 
-        var lastException: Exception? = null
-        var fallbackServiceName: String? = null
+        val providers = fallbackEntries.map { fallbackEntry ->
+            object : FallbackTurnProvider<AssistantTurn> {
+                override val entry: FallbackEntry = fallbackEntry
 
-        try {
-            for ((index, entry) in fallbackEntries.withIndex()) {
-                // Skip fallback services whose context window is too small for the current history
-                // On-device models handle their own context limits, so skip this check for them
-                if (!entry.service.isOnDevice) {
-                    val creds = instanceCredentials(entry.instanceId, entry.service)
-                    val entryWindowChars = ModelCatalog.estimateContextWindow(creds.modelId) * ESTIMATED_CHARS_PER_TOKEN
-                    if (historyChars > entryWindowChars) {
-                        lastException = ContextWindowExceededException()
-                        _fallbackStatus.value = FallbackStatus(
-                            serviceName = entry.service.displayName,
-                            errorReason = ContextWindowExceededException().toUiError(),
-                            nextServiceName = fallbackEntries.getOrNull(index + 1)?.service?.displayName,
-                        )
-                        continue
+                override suspend fun respond(): AssistantTurn {
+                    // Skip fallback services whose context window is too small for the current history
+                    // On-device models handle their own context limits, so skip this check for them
+                    if (!fallbackEntry.service.isOnDevice) {
+                        val creds = instanceCredentials(fallbackEntry.instanceId, fallbackEntry.service)
+                        val entryWindowChars = ModelCatalog.estimateContextWindow(creds.modelId) * ESTIMATED_CHARS_PER_TOKEN
+                        if (historyChars > entryWindowChars) throw ContextWindowExceededException()
                     }
-                }
 
-                // No retry wrapper here: each network call retries inside askWithService.
-                // Retrying the whole call would re-enter the tool loop against a chat
-                // history already mutated by the failed attempt.
-                val turn = try {
-                    askWithService(entry.service, messages, systemPrompt, entry.instanceId)
-                } catch (e: Exception) {
-                    if (e is kotlinx.coroutines.CancellationException) throw e
-                    // On-device services should not silently fall back — surface the error
-                    if (entry.service.isOnDevice) throw e
-                    lastException = e
-                    _fallbackStatus.value = FallbackStatus(
-                        serviceName = entry.service.displayName,
-                        errorReason = e.toUiError(),
-                        nextServiceName = fallbackEntries.getOrNull(index + 1)?.service?.displayName,
-                    )
-                    continue
+                    // No retry wrapper here: each network call retries inside askWithService.
+                    // Retrying the whole call would re-enter the tool loop against a chat
+                    // history already mutated by the failed attempt.
+                    return askWithService(fallbackEntry.service, messages, systemPrompt, fallbackEntry.instanceId)
                 }
-                if (index > 0) {
-                    fallbackServiceName = entry.service.displayName
-                }
+            }
+        }
+
+        FallbackTurnTraversal(
+            providers = providers,
+            onFallback = { failed, error, next ->
+                _fallbackStatus.value = FallbackStatus(
+                    serviceName = failed.entry.service.displayName,
+                    errorReason = error.toUiError(),
+                    nextServiceName = next?.entry?.service?.displayName,
+                )
+            },
+            onSuccess = { result ->
                 chatHistory.update {
                     it.toMutableList().apply {
                         add(
                             History(
                                 role = History.Role.ASSISTANT,
-                                content = turn.content,
-                                reasoningContent = turn.reasoningContent,
-                                fallbackServiceName = fallbackServiceName,
-                                routing = turn.routing,
+                                content = result.turn.content,
+                                reasoningContent = result.turn.reasoningContent,
+                                fallbackServiceName = if (result.isFallback) result.entry.service.displayName else null,
+                                routing = result.turn.routing,
                             ),
                         )
                     }
                 }
                 saveCurrentConversation()
-                return
-            }
-
-            throw if (fallbackEntries.size > 1 && lastException != null) {
-                AllServicesFailedException()
-            } else {
-                lastException ?: OpenAICompatibleEmptyResponseException()
-            }
-        } finally {
-            _fallbackStatus.value = null
-        }
+            },
+            onDone = { _fallbackStatus.value = null },
+        ).run()
     }
 
     private suspend fun handleOpenAICompatibleChatWithTools(
@@ -1945,6 +1909,12 @@ class RemoteDataRepository(
 
     override fun setDynamicUiEnabled(enabled: Boolean) {
         appSettings.setDynamicUiEnabled(enabled)
+    }
+
+    override fun isAdminModeEnabled(): Boolean = appSettings.isAdminModeEnabled()
+
+    override fun setAdminModeEnabled(enabled: Boolean) {
+        appSettings.setAdminModeEnabled(enabled)
     }
 
     override fun getThemeMode(): ThemeMode = appSettings.getThemeMode()

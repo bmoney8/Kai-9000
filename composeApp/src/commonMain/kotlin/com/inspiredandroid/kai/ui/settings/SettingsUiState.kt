@@ -62,9 +62,19 @@ enum class SettingsTab {
     Integrations,
 }
 
+/** Customer Mode keeps everyday preferences and assistant behavior available, while provider,
+ * tool, integration, and host administration stays behind the Admin Mode toggle.
+ */
+internal fun visibleSettingsTabs(isAdminMode: Boolean, showSandbox: Boolean): List<SettingsTab> =
+    SettingsTab.entries.filter { tab ->
+        (isAdminMode || tab == SettingsTab.General || tab == SettingsTab.Agent) &&
+            (tab != SettingsTab.Sandbox || showSandbox)
+    }
+
 @Immutable
 data class SettingsUiState(
-    val currentTab: SettingsTab = SettingsTab.Services,
+    val currentTab: SettingsTab = SettingsTab.General,
+    val isAdminMode: Boolean = false,
     val configuredServices: ImmutableList<ConfiguredServiceEntry> = persistentListOf(),
     val expandedServiceId: String? = null,
     val availableServicesToAdd: ImmutableList<Service> = persistentListOf(),
