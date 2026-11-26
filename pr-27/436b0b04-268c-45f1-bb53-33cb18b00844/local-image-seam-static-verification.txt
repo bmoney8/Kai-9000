@@ -10,6 +10,7 @@ PASS: AVX2_CPU backend defined
 PASS: whitelist families present
 PASS: FLUX benchmark-only flag
 PASS: unload-covered test file exists
+PASS: backend-resolution test file exists
 PASS: benchmark matrix cells marked not measured
 PASS: latency described as stretch target only
 PASS: no .kt lines over 140 chars
