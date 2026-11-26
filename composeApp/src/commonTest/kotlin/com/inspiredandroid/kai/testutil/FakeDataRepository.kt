@@ -49,6 +49,16 @@ class FakeDataRepository : DataRepository {
     var clearHistoryCalls = 0
     var askException: Exception? = null
 
+    data class AskWithToolsCall(
+        val prompt: String,
+        val instanceId: String?,
+        val conversationIdOverride: String?,
+    )
+
+    val askWithToolsCalls = mutableListOf<AskWithToolsCall>()
+    var askWithToolsResponse: String = ""
+    var askWithToolsException: Exception? = null
+
     /**
      * When non-null, [ask] suspends on this gate before doing any work. Tests can use this
      * to keep an in-flight ask in progress while inspecting state (e.g., to verify
@@ -512,10 +522,17 @@ class FakeDataRepository : DataRepository {
     override fun getHeartbeatInstanceId(): String? = null
     override fun setHeartbeatInstanceId(instanceId: String?) {}
 
-    override suspend fun askWithTools(prompt: String, instanceId: String?, conversationIdOverride: String?): String = ""
+    override suspend fun askWithTools(prompt: String, instanceId: String?, conversationIdOverride: String?): String {
+        askWithToolsCalls += AskWithToolsCall(prompt, instanceId, conversationIdOverride)
+        askWithToolsException?.let { throw it }
+        return askWithToolsResponse
+    }
     override suspend fun askSilently(question: String): String = ""
     override suspend fun askSilentlyWithInstance(instanceId: String, prompt: String, timeoutMs: Long): String = ""
-    override suspend fun addAssistantMessage(content: String) {}
+    val addAssistantMessageCalls = mutableListOf<String>()
+    override suspend fun addAssistantMessage(content: String) {
+        addAssistantMessageCalls += content
+    }
     override suspend fun getOrCreateHeartbeatConversationId(): String = "fake-heartbeat-conversation"
 
     override val hasUnreadHeartbeat: MutableStateFlow<Boolean> = MutableStateFlow(false)

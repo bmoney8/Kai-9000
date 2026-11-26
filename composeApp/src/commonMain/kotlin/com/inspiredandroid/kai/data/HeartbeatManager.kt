@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @Immutable
 @Serializable
@@ -32,6 +33,8 @@ class HeartbeatManager(
     private val memoryStore: MemoryStore,
     private val taskStore: TaskStore,
     private val emailStore: EmailStore? = null,
+    private val now: () -> Instant = { Clock.System.now() },
+    private val timeZone: () -> TimeZone = { TimeZone.currentSystemDefault() },
 ) {
 
     private val config = SettingsJsonValue(
@@ -57,8 +60,8 @@ class HeartbeatManager(
         val config = getConfig()
         if (!config.enabled) return false
 
-        val now = Clock.System.now()
-        val localNow = now.toLocalDateTime(TimeZone.currentSystemDefault())
+        val now = now()
+        val localNow = now.toLocalDateTime(timeZone())
         val currentHour = localNow.hour
 
         // Check active hours
@@ -158,7 +161,7 @@ class HeartbeatManager(
 
     suspend fun recordHeartbeat(success: Boolean, error: String? = null) {
         val entry = HeartbeatLogEntry(
-            timestampEpochMs = Clock.System.now().toEpochMilliseconds(),
+            timestampEpochMs = now().toEpochMilliseconds(),
             success = success,
             error = error,
         )
@@ -178,6 +181,6 @@ class HeartbeatManager(
     }
 
     fun markHeartbeatExecuted(config: HeartbeatConfig = getConfig()) {
-        saveConfig(config.copy(lastHeartbeatEpochMs = Clock.System.now().toEpochMilliseconds()))
+        saveConfig(config.copy(lastHeartbeatEpochMs = now().toEpochMilliseconds()))
     }
 }
