@@ -139,6 +139,7 @@ Plus a built-in **Free** tier that requires no API key.
 - **[MCP Servers](features/mcp.md)** — Remote tool servers over the Model Context Protocol
 - **[Dynamic UI](features/dynamic-ui.md)** — AI-generated interactive screens rendered inline in chat
 - **[On-Device Inference](features/on-device-inference.md)** — Local LiteRT models, downloads, and integrity checks
+- **[Local Image Generation](features/local-image-generation.md)** — Additive on-device image-provider seam, model whitelist, and benchmark plan
 - **[Reasoning](features/reasoning.md)** — How reasoning traces are sent back to providers and shown
 - **[System Prompts](features/system-prompts.md)** — How each prompt variant is composed
 - **[Skills](features/skills.md)** — Installable SKILL.md instruction bundles

@@ -46,6 +46,7 @@ nav:
     - Daemon: features/daemon.md
     - Encryption: features/encryption.md
     - On-Device Inference: features/on-device-inference.md
+    - Local Image Generation: features/local-image-generation.md
     - Reasoning: features/reasoning.md
     - System Prompts: features/system-prompts.md
     - Skills: features/skills.md
