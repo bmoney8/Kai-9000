@@ -4,6 +4,7 @@ import com.inspiredandroid.kai.data.AppSettings
 import com.inspiredandroid.kai.data.FirstLaunchProvisioningPreset
 import com.inspiredandroid.kai.data.PresetService
 import com.inspiredandroid.kai.data.Service
+import com.inspiredandroid.kai.data.getConfiguredServiceInstances
 import com.inspiredandroid.kai.mcp.McpServerConfig
 import com.russhwolf.settings.MapSettings
 import kotlin.test.Test
