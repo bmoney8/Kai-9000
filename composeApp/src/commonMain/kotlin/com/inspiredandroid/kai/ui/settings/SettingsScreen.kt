@@ -407,6 +407,7 @@ private fun AdminModeToggle(
     }
 }
 
+@Composable
 private fun SettingsTabSelector(
     tabs: ImmutableList<SettingsTab>,
     currentTab: SettingsTab,
