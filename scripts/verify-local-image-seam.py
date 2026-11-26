@@ -42,12 +42,14 @@ check("FLUX benchmark-only flag", "benchmarkOnly = true" in source)
 
 tests = ROOT / "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/inference/image/LocalImageGenerationTest.kt"
 check("unload-covered test file exists", tests.is_file() and tests.read_text().count("unload") >= 6)
+backend_tests = ROOT / "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/inference/image/ImageBackendResolutionTest.kt"
+check("backend-resolution test file exists", backend_tests.is_file() and backend_tests.read_text().count("@Test") >= 4)
 
 docs = (ROOT / "docs/features/local-image-generation.md").read_text()
 check("benchmark matrix cells marked not measured", docs.count("not measured") >= 10)
 check("latency described as stretch target only", "stretch target" in docs and "not a" in docs)
 
-kt_files = list(image_dir["common"].glob("*.kt")) + list(image_dir["android"].glob("*.kt")) + list(image_dir["desktop"].glob("*.kt")) + list(image_dir["ios"].glob("*.kt")) + list(image_dir["wasm"].glob("*.kt")) + [tests]
+kt_files = list(image_dir["common"].glob("*.kt")) + list(image_dir["android"].glob("*.kt")) + list(image_dir["desktop"].glob("*.kt")) + list(image_dir["ios"].glob("*.kt")) + list(image_dir["wasm"].glob("*.kt")) + [tests, backend_tests]
 overlong = [(p, line) for p in kt_files for line in p.read_text().splitlines() if len(line) > 140]
 check("no .kt lines over 140 chars", not overlong)
 

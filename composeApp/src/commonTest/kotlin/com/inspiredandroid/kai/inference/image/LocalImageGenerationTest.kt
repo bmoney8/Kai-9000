@@ -6,7 +6,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -62,16 +61,6 @@ class LocalImageGenerationTest {
         assertIs<ImageGenerationValidation.Invalid>(validateImageGenerationRequest(request(modelPath = "https://example.test/model.gguf")))
         assertIs<ImageGenerationValidation.Invalid>(validateImageGenerationRequest(request(prompt = " ")))
         assertIs<ImageGenerationValidation.Invalid>(validateImageGenerationRequest(request(modelId = "unknown")))
-    }
-
-    @Test
-    fun backendResolutionUsesCapabilityGatesAndAvx2Fallback() {
-        val desktop = setOf(ImageBackend.VULKAN_IGPU, ImageBackend.AVX2_CPU)
-        assertEquals(ImageBackend.VULKAN_IGPU, resolveImageBackend(ImageBackend.VULKAN_IGPU, desktop))
-        assertEquals(ImageBackend.AVX2_CPU, resolveImageBackend(ImageBackend.VULKAN_IGPU, desktop, setOf(ImageBackend.VULKAN_IGPU)))
-        assertEquals(ImageBackend.AVX2_CPU, resolveImageBackend(ImageBackend.DIRECTML, desktop))
-        assertNull(resolveImageBackend(ImageBackend.DIRECTML, setOf(ImageBackend.VULKAN_IGPU)))
-        assertNull(resolveImageBackend(ImageBackend.VULKAN_IGPU, emptySet()))
     }
 
     @Test
