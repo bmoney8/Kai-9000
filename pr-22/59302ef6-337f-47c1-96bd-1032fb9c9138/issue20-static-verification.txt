@@ -1,0 +1,30 @@
+Issue #20 / PR #22 — verification record
+========================================
+
+Environment constraint (from project manager):
+  This environment has no Java/JAVA_HOME by design. Gradle tests were NOT run.
+  No JDK was installed, no Gradle caches were inspected, and no test pass is claimed.
+
+Checks performed (static only):
+  1. git diff --check                       -> clean (no whitespace errors)
+  2. git status --short before commit       -> only the three intended composeApp data source/test files
+  3. git show --stat on the two commits     -> FallbackTurnTraversal.kt (+77),
+                                                RemoteDataRepository.kt (+34/-53),
+                                                RemoteDataRepositoryFallbackTest.kt (+95/-6)
+  4. Source inspection of production flow:
+     - askInternal builds FallbackTurnProvider entries from buildFallbackChain output,
+       preserves the context-window precheck, no-retry comment, askWithService call,
+       FallbackStatus values (serviceName/errorReason/nextServiceName), history append,
+       saveCurrentConversation() call, and status clearing in a finally-equivalent hook.
+     - FallbackTurnTraversal.run() catches CancellationException separately, rethrows
+       on-device failures, calls onFallback for remote failures, calls onSuccess once,
+       and clears status via onDone in finally.
+     - Test fakes use Service.OpenAICompatible / Service.LiteRT entries and throw
+       OpenAICompatibleConnectionException / CancellationException; no HTTP client is used.
+  5. PR status -> open, mergeable, linked to issue #20, no required checks reported.
+
+Pending (requires a JDK-enabled environment):
+  ./gradlew :composeApp:jvmTest   (or :composeApp:allTests)
+  Expected new tests:
+   - remote network failure retries the turn on configured LiteRT and persists its answer
+   - cancellation during remote call stops fallback before LiteRT and persists nothing
