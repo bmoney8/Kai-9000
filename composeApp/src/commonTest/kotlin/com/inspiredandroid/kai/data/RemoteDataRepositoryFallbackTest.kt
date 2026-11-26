@@ -149,4 +149,26 @@ class RemoteDataRepositoryFallbackTest {
         assertTrue(persisted.isEmpty())
         assertEquals(1, statusCleared)
     }
+
+    @Test
+    fun `on-device failure is surfaced instead of silently falling back further`() = runTest {
+        val chain = omnirouteToLiteRtChain()
+        val remote = FakeProvider(chain[0]) { "remote answer" }
+        val local = FakeProvider(chain[1]) { throw IllegalStateException("litert failed") }
+        val sentinel = FakeProvider(FallbackEntry("sentinel", Service.Free)) { "should never run" }
+        val statuses = mutableListOf<FallbackStatus>()
+        val persisted = mutableListOf<FallbackTurnResult<String>>()
+        var statusCleared = 0
+
+        assertFailsWith<IllegalStateException> {
+            traversal(listOf(remote, local, sentinel), statuses, persisted) { statusCleared++ }.run()
+        }
+
+        assertEquals(1, remote.callCount)
+        assertEquals(1, local.callCount)
+        assertEquals(0, sentinel.callCount)
+        assertTrue(statuses.isEmpty())
+        assertTrue(persisted.isEmpty())
+        assertEquals(1, statusCleared)
+    }
 }
