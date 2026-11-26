@@ -1,0 +1,37 @@
+Issue #20 / PR #22 — verification record (tests-only revision round 2)
+=====================================================================
+
+Environment constraint (from project manager):
+  This environment has no Java/JAVA_HOME by design. Gradle tests were NOT run.
+  No JDK was installed, no Gradle caches were inspected, and no test pass is claimed.
+
+Revision scope (per reviewer approval + PM guidance):
+  Only RemoteDataRepositoryFallbackTest.kt changed in commit cb4de701
+  (+22 lines: third deterministic test). Production files
+  (FallbackTurnTraversal.kt, RemoteDataRepository.kt) untouched in this round.
+
+Static checks performed:
+  1. git diff --check                         -> clean
+  2. git show --stat HEAD                     -> 1 file changed, test file only
+  3. Source inspection of new test:
+     - Sentinel provider (Service.Free) placed after LiteRT; if on-device failure
+       were swallowed, the sentinel would be called and assertions would fail.
+     - assertFailsWith<IllegalStateException> verifies the on-device error surfaces.
+     - callCount checks: remote 1, local 1, sentinel 0; no persistence, no status.
+
+Test list (final, all in RemoteDataRepositoryFallbackTest.kt):
+  Pre-existing chain tests (unchanged):
+   1. on-device provider stays after remote provider when engine available
+   2. on-device provider excluded when local inference engine unavailable
+   3. free tier appended after on-device fallback when enabled
+  New runtime traversal tests:
+   4. remote network failure retries the turn on configured LiteRT and persists its answer
+   5. cancellation during remote call stops fallback before LiteRT and persists nothing
+   6. on-device failure is surfaced instead of silently falling back further
+
+Pending (requires a JDK-enabled environment):
+  ./gradlew :composeApp:jvmTest   (or :composeApp:allTests)
+  Note: the `tests` merge check is a known false negative in this environment
+  (reports "No test files changed" while the test file is in the diff); it
+  clears at review/runtime and must not be looped on or satisfied with
+  filler files.
