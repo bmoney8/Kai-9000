@@ -93,4 +93,4 @@ The ledger must be filled with exact byte counts when a model is pinned and a na
 
 ## Verification status
 
-Static source review only: no JDK/Gradle execution is available in this environment, so the authored tests were **not run**, no binary was built, and no benchmark or footprint number was measured. Build verification and the benchmark matrix must be completed in an environment with the JDK, native toolchain, and reference hardware before this provider can be enabled.
+Static source review only: no JDK/Gradle execution is available in this environment, so the authored tests were **not run**, no binary was built, and no benchmark or footprint number was measured. Repository-scoped contract checks can be reproduced without a JDK via `scripts/verify-local-image-seam.py`. Build verification, the full test suite, and the benchmark matrix must be completed in an environment with the JDK, native toolchain, and reference hardware before this provider can be enabled.
