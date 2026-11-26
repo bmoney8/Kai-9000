@@ -1,0 +1,14 @@
+PASS file exists: docs/features/failover-testing.md
+PASS file exists: composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/EndpointHealthProbe.kt
+PASS file exists: composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/FailoverPreflight.kt
+PASS file exists: composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/EndpointHealthProbeTest.kt
+PASS file exists: composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/FailoverPreflightTest.kt
+PASS file exists: composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/FailoverSettingsTest.kt
+PASS pattern in composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/EndpointHealthProbeTest.kt: caller cancellation is not converted
+PASS pattern in composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/FailoverPreflightTest.kt: failover is reversible
+PASS pattern in composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/FailoverPreflightTest.kt: routing decision wins
+PASS pattern in composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/FailoverSettingsTest.kt: service_openai-compatible_failover_enabled
+PASS pattern in composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/AppSettingsService.kt: service_${settingsKeyPrefix}_failover_enabled
+PASS pattern in composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/RemoteDataRepository.kt: FailoverPreflight(
+PASS git diff --check
+STATIC VERIFICATION RESULT: PASS
