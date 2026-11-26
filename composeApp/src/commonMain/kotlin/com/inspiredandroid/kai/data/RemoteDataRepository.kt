@@ -26,7 +26,6 @@ import com.inspiredandroid.kai.inference.getTotalMemoryBytes
 import com.inspiredandroid.kai.linux.LinuxDistro
 import com.inspiredandroid.kai.mcp.McpServerConfig
 import com.inspiredandroid.kai.mcp.McpServerManager
-import com.inspiredandroid.kai.network.AllServicesFailedException
 import com.inspiredandroid.kai.network.AnthropicInsufficientCreditsException
 import com.inspiredandroid.kai.network.AnthropicInvalidApiKeyException
 import com.inspiredandroid.kai.network.ContextWindowExceededException
@@ -931,71 +930,53 @@ class RemoteDataRepository(
 
         val historyChars = messages.sumOf { it.content.length } + (systemPrompt?.length ?: 0)
 
-        var lastException: Exception? = null
-        var fallbackServiceName: String? = null
+        val providers = fallbackEntries.map { fallbackEntry ->
+            object : FallbackTurnProvider<AssistantTurn> {
+                override val entry: FallbackEntry = fallbackEntry
 
-        try {
-            for ((index, entry) in fallbackEntries.withIndex()) {
-                // Skip fallback services whose context window is too small for the current history
-                // On-device models handle their own context limits, so skip this check for them
-                if (!entry.service.isOnDevice) {
-                    val creds = instanceCredentials(entry.instanceId, entry.service)
-                    val entryWindowChars = ModelCatalog.estimateContextWindow(creds.modelId) * ESTIMATED_CHARS_PER_TOKEN
-                    if (historyChars > entryWindowChars) {
-                        lastException = ContextWindowExceededException()
-                        _fallbackStatus.value = FallbackStatus(
-                            serviceName = entry.service.displayName,
-                            errorReason = ContextWindowExceededException().toUiError(),
-                            nextServiceName = fallbackEntries.getOrNull(index + 1)?.service?.displayName,
-                        )
-                        continue
+                override suspend fun respond(): AssistantTurn {
+                    // Skip fallback services whose context window is too small for the current history
+                    // On-device models handle their own context limits, so skip this check for them
+                    if (!fallbackEntry.service.isOnDevice) {
+                        val creds = instanceCredentials(fallbackEntry.instanceId, fallbackEntry.service)
+                        val entryWindowChars = ModelCatalog.estimateContextWindow(creds.modelId) * ESTIMATED_CHARS_PER_TOKEN
+                        if (historyChars > entryWindowChars) throw ContextWindowExceededException()
                     }
-                }
 
-                // No retry wrapper here: each network call retries inside askWithService.
-                // Retrying the whole call would re-enter the tool loop against a chat
-                // history already mutated by the failed attempt.
-                val turn = try {
-                    askWithService(entry.service, messages, systemPrompt, entry.instanceId)
-                } catch (e: Exception) {
-                    if (e is kotlinx.coroutines.CancellationException) throw e
-                    // On-device services should not silently fall back — surface the error
-                    if (entry.service.isOnDevice) throw e
-                    lastException = e
-                    _fallbackStatus.value = FallbackStatus(
-                        serviceName = entry.service.displayName,
-                        errorReason = e.toUiError(),
-                        nextServiceName = fallbackEntries.getOrNull(index + 1)?.service?.displayName,
-                    )
-                    continue
+                    // No retry wrapper here: each network call retries inside askWithService.
+                    // Retrying the whole call would re-enter the tool loop against a chat
+                    // history already mutated by the failed attempt.
+                    return askWithService(fallbackEntry.service, messages, systemPrompt, fallbackEntry.instanceId)
                 }
-                if (index > 0) {
-                    fallbackServiceName = entry.service.displayName
-                }
+            }
+        }
+
+        FallbackTurnTraversal(
+            providers = providers,
+            onFallback = { failed, error, next ->
+                _fallbackStatus.value = FallbackStatus(
+                    serviceName = failed.entry.service.displayName,
+                    errorReason = error.toUiError(),
+                    nextServiceName = next?.entry?.service?.displayName,
+                )
+            },
+            onSuccess = { result ->
                 chatHistory.update {
                     it.toMutableList().apply {
                         add(
                             History(
                                 role = History.Role.ASSISTANT,
-                                content = turn.content,
-                                reasoningContent = turn.reasoningContent,
-                                fallbackServiceName = fallbackServiceName,
+                                content = result.turn.content,
+                                reasoningContent = result.turn.reasoningContent,
+                                fallbackServiceName = if (result.isFallback) result.entry.service.displayName else null,
                             ),
                         )
                     }
                 }
                 saveCurrentConversation()
-                return
-            }
-
-            throw if (fallbackEntries.size > 1 && lastException != null) {
-                AllServicesFailedException()
-            } else {
-                lastException ?: OpenAICompatibleEmptyResponseException()
-            }
-        } finally {
-            _fallbackStatus.value = null
-        }
+            },
+            onDone = { _fallbackStatus.value = null },
+        ).run()
     }
 
     private suspend fun handleOpenAICompatibleChatWithTools(
