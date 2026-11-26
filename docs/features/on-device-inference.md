@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-10-21
 
-Kai can run AI models directly on the user's device using Google's LiteRT LM SDK. This enables fully offline, private inference with no API key, no internet connection, and no cost. Available on **Android**, **Desktop** (macOS, Linux, Windows), and **iOS**.
+Kai can run AI models directly on the user's device using Google's LiteRT LM SDK. This enables fully offline, private inference with no API key, no internet connection, and no cost. Available on **Android**, **Desktop** (macOS, Linux, Windows), and **iOS**. When a configured OpenAI-compatible primary is unreachable, the optional preflight failover can route a turn to this existing text engine; the gateway remains configured and is retried on the next turn. Local image failover is gated on a separate image-engine capability and is not implemented in this baseline.
 
 ## How It Works
 

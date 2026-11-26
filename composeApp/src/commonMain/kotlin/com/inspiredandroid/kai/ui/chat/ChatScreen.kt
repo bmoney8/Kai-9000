@@ -77,6 +77,7 @@ import com.inspiredandroid.kai.BackIcon
 import com.inspiredandroid.kai.TerminalLine
 import com.inspiredandroid.kai.data.Service
 import com.inspiredandroid.kai.data.supportsAgenticFlows
+import com.inspiredandroid.kai.data.tooltipText
 import com.inspiredandroid.kai.getBackgroundDispatcher
 import com.inspiredandroid.kai.onDragAndDropEventDropped
 import com.inspiredandroid.kai.ui.build.KaiBuildScreen
@@ -734,9 +735,16 @@ private fun ChatModeScreen(
                             val executingToolsState = rememberExecutingTools(uiState.history)
 
                             val fallbackStatusText = uiState.fallbackStatus?.let { status ->
-                                val failed = stringResource(Res.string.fallback_service_failed, status.serviceName, uiErrorText(status.errorReason))
-                                val next = status.nextServiceName?.let { stringResource(Res.string.fallback_trying_next, it) }
-                                if (next != null) "$failed\n$next" else failed
+                                status.tooltipText(
+                                    failedText = stringResource(
+                                        Res.string.fallback_service_failed,
+                                        status.serviceName,
+                                        uiErrorText(status.errorReason),
+                                    ),
+                                    tryingNextText = status.nextServiceName?.let {
+                                        stringResource(Res.string.fallback_trying_next, it)
+                                    },
+                                )
                             }
 
                             // Group every reasoning segment in a response (intermediate tool-call /

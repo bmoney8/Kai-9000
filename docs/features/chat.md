@@ -45,7 +45,7 @@ Auto-derived from the first user message when a conversation is saved for the fi
 
 ## Message Sending
 
-- User message is added to history, then an API call is made via the fallback chain
+- User message is added to history, then an API call is made via the fallback chain. Before a turn starts, an enabled bounded `/models` reachability probe can skip an unreachable OpenAI-compatible primary for that turn and route to the configured on-device LiteRT fallback; the thinking-row status explains the selected path. This does not change the configured order, so the remote endpoint is checked again on the next turn.
 - Tool calls are executed inline (TOOL_EXECUTING shown during execution, TOOL result stored after)
 - On success, the conversation is saved
 - On failure, an error is displayed with a retry button
