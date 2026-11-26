@@ -210,7 +210,9 @@ compose.desktop {
                 iconFile.set(project.file("icon.png"))
                 // Applies to the shared jlink runtime image for every platform, not just Linux —
                 // java.sql is required since the SQLDelight/SQLite migration (9d6ceec9).
-                modules("jdk.security.auth", "java.sql")
+                // java.management + jdk.management are required for desktop memory reporting
+                // (ManagementFactory / OperatingSystemMXBean in InferencePlatform.jvm.kt).
+                modules("jdk.security.auth", "java.sql", "java.management", "jdk.management")
             }
         }
     }
