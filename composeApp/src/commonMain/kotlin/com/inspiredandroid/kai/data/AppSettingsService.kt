@@ -135,6 +135,25 @@ fun AppSettings.setInstanceBaseUrl(instanceId: String, baseUrl: String) {
     settings.putString("instance_${instanceId}_base_url", baseUrl)
 }
 
+private fun Service.failoverEnabledKey(): String = "service_${settingsKeyPrefix}_failover_enabled"
+private fun Service.failoverTimeoutMsKey(): String = "service_${settingsKeyPrefix}_failover_timeout_ms"
+
+fun AppSettings.isFailoverEnabled(service: Service): Boolean =
+    settings.getBoolean(service.failoverEnabledKey(), true)
+
+fun AppSettings.setFailoverEnabled(service: Service, enabled: Boolean) {
+    settings.putBoolean(service.failoverEnabledKey(), enabled)
+}
+
+fun AppSettings.getFailoverTimeoutMs(service: Service): Long =
+    settings.getLong(service.failoverTimeoutMsKey(), DEFAULT_FAILOVER_TIMEOUT_MS)
+
+fun AppSettings.setFailoverTimeoutMs(service: Service, timeoutMs: Long) {
+    settings.putLong(service.failoverTimeoutMsKey(), timeoutMs.coerceAtLeast(1L))
+}
+
+internal const val DEFAULT_FAILOVER_TIMEOUT_MS = 1_500L
+
 fun AppSettings.removeInstanceSettings(instanceId: String) {
     settings.remove("instance_${instanceId}_api_key")
     settings.remove("instance_${instanceId}_model_id")

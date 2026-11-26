@@ -42,6 +42,7 @@ import com.inspiredandroid.kai.network.OpenAICompatibleRequestTooLargeException
 import com.inspiredandroid.kai.network.OmniRouteRouting
 import com.inspiredandroid.kai.network.Requests
 import com.inspiredandroid.kai.network.ServiceCredentials
+import com.inspiredandroid.kai.network.UiError
 import com.inspiredandroid.kai.network.UnsupportedFileTypeException
 import com.inspiredandroid.kai.network.dtos.anthropic.extractText
 import com.inspiredandroid.kai.network.dtos.gemini.extractText
@@ -197,6 +198,8 @@ class RemoteDataRepository(
     private val skillManager: SkillManager,
     private val sandboxController: SandboxController,
     private val localInferenceEngine: LocalInferenceEngine? = null,
+    private val endpointHealthProbe: EndpointHealthProbe = KtorEndpointHealthProbe(requests),
+    private val hasLocalImageCapability: () -> Boolean = { false },
 ) : DataRepository {
 
     private val prettyJson = Json { prettyPrint = true }
@@ -947,9 +950,31 @@ class RemoteDataRepository(
 
         val fallbackEntries = getOrderedFallbackEntries().filter { hasValidInstanceApiKey(it.instanceId, it.service) }
 
+        // Pre-fallback health check: an unreachable OmniRoute/mesh primary is skipped for this
+        // turn only. The original chain is untouched, so a recovered endpoint is used again on
+        // the next turn. Traversal itself (and its cancellation/retry behavior) is unchanged.
+        val preflightResult = FailoverPreflight(
+            isEnabled = { appSettings.isFailoverEnabled(Service.OpenAICompatible) },
+            timeoutMs = { appSettings.getFailoverTimeoutMs(Service.OpenAICompatible) },
+            probe = endpointHealthProbe,
+            hasLocalImageCapability = hasLocalImageCapability,
+        ).apply(
+            entries = fallbackEntries,
+            serviceOf = { it.service },
+            credentialsOf = { instanceCredentials(it.instanceId, it.service) },
+        )
+        preflightResult.decision?.let { decision ->
+            _fallbackStatus.value = FallbackStatus(
+                serviceName = decision.failedServiceName,
+                errorReason = UiError.Resource(Res.string.error_openai_compatible_connection),
+                nextServiceName = decision.selectedServiceName,
+                routingDecision = decision.tooltipText,
+            )
+        }
+
         val historyChars = messages.sumOf { it.content.length } + (systemPrompt?.length ?: 0)
 
-        val providers = fallbackEntries.map { fallbackEntry ->
+        val providers = preflightResult.entries.map { fallbackEntry ->
             object : FallbackTurnProvider<AssistantTurn> {
                 override val entry: FallbackEntry = fallbackEntry
 
@@ -977,6 +1002,7 @@ class RemoteDataRepository(
                     serviceName = failed.entry.service.displayName,
                     errorReason = error.toUiError(),
                     nextServiceName = next?.entry?.service?.displayName,
+                    routingDecision = _fallbackStatus.value?.routingDecision,
                 )
             },
             onSuccess = { result ->
@@ -987,7 +1013,11 @@ class RemoteDataRepository(
                                 role = History.Role.ASSISTANT,
                                 content = result.turn.content,
                                 reasoningContent = result.turn.reasoningContent,
-                                fallbackServiceName = if (result.isFallback) result.entry.service.displayName else null,
+                                fallbackServiceName = if (result.isFallback || preflightResult.decision != null) {
+                                    result.entry.service.displayName
+                                } else {
+                                    null
+                                },
                                 routing = result.turn.routing,
                             ),
                         )
