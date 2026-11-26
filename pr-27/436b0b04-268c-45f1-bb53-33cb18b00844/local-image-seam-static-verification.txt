@@ -1,0 +1,18 @@
+PASS: expect provider declared in commonMain
+PASS: actual provider returns null on android
+PASS: actual provider returns null on desktop
+PASS: actual provider returns null on ios
+PASS: actual provider returns null on wasm
+PASS: unload runs in finally
+PASS: no HTTP(S) endpoints in seam
+PASS: no discrete-GPU backend enum
+PASS: AVX2_CPU backend defined
+PASS: whitelist families present
+PASS: FLUX benchmark-only flag
+PASS: unload-covered test file exists
+PASS: benchmark matrix cells marked not measured
+PASS: latency described as stretch target only
+PASS: no .kt lines over 140 chars
+PASS: no trailing whitespace in new .kt sources
+
+0 failure(s).
