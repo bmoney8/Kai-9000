@@ -94,6 +94,8 @@ sealed class Service(
      */
     val responsesUrl: String? = null,
     val modelsUrl: String? = null,
+    /** OpenAI-compatible image-generation endpoint; null when unsupported. */
+    val imageEndpoint: String? = null,
     val modelsResponseIsArray: Boolean = false,
     val filterActiveStrictly: Boolean = false,
     val filterByModelType: Boolean = false,
@@ -560,6 +562,7 @@ sealed class Service(
         chatUrl = "/chat/completions",
         responsesUrl = "/responses",
         modelsUrl = "/models",
+        imageEndpoint = "/images/generations",
         sortModelsById = true,
     )
 
@@ -588,6 +591,13 @@ sealed class Service(
             .trimEnd('/')
             .let { url -> if (url.endsWith(OpenAICompatible.chatUrl, ignoreCase = true)) url.dropLast(OpenAICompatible.chatUrl.length) else url }
             .trimEnd('/')
+
+        /**
+         * Resolves an endpoint [path] (e.g. `/chat/completions` or `/images/generations`) against the
+         * normalized OpenAI-compatible [baseUrl]. Users often paste a full chat endpoint; the
+         * normalization there keeps `/images/generations` from doubling up the pasted path.
+         */
+        fun resolveOpenAICompatibleEndpoint(baseUrl: String, path: String): String = "${normalizeOpenAICompatibleBaseUrl(baseUrl)}$path"
 
         fun fromId(id: String): Service = all.find { it.id == id } ?: Free
     }

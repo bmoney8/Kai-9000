@@ -44,6 +44,8 @@ fun AppSettings.exportToJson(
                             if (apiKey.isNotBlank()) put("api_key", JsonPrimitive(apiKey))
                             val modelId = getInstanceModelId(instance.instanceId)
                             if (modelId.isNotBlank()) put("model_id", JsonPrimitive(modelId))
+                            val imageModelId = getInstanceImageModelId(instance.instanceId)
+                            if (imageModelId.isNotBlank()) put("image_model_id", JsonPrimitive(imageModelId))
                             val baseUrl = getInstanceBaseUrl(instance.instanceId)
                             if (baseUrl.isNotBlank()) put("base_url", JsonPrimitive(baseUrl))
                             if (getInstanceUseCustomModel(instance.instanceId)) {
@@ -197,6 +199,7 @@ fun AppSettings.importFromJson(
                 val instanceId = obj["instanceId"]?.jsonPrimitive?.content ?: return@forEach
                 obj["api_key"]?.jsonPrimitive?.content?.let { setInstanceApiKey(instanceId, it) }
                 obj["model_id"]?.jsonPrimitive?.content?.let { setInstanceModelId(instanceId, it) }
+                obj["image_model_id"]?.jsonPrimitive?.content?.let { setInstanceImageModelId(instanceId, it) }
                 obj["base_url"]?.jsonPrimitive?.content?.let { baseUrl ->
                     val service = importedInstances.find { it.instanceId == instanceId }
                         ?.let { Service.fromId(it.serviceId) }

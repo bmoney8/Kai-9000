@@ -37,6 +37,8 @@ data class ConfiguredServiceEntry(
     /** OpenAI-Compatible only: when true, [customModelId] is used for chat instead of [selectedModel]. */
     val useCustomModel: Boolean = false,
     val customModelId: String = "",
+    /** OpenAI-Compatible only: model id used for `/images/generations`; empty disables images. */
+    val imageModelId: String = "",
 )
 
 enum class ConnectionStatus {

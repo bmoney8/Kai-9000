@@ -95,6 +95,17 @@ fun AppSettings.setInstanceModelId(instanceId: String, modelId: String) {
     settings.putString("instance_${instanceId}_model_id", modelId)
 }
 
+/**
+ * Per-instance image-generation model id (OpenAI-compatible only).
+ * Empty string means image generation is disabled for this instance — the default,
+ * so existing installs are unaffected and no new credential is required.
+ */
+fun AppSettings.getInstanceImageModelId(instanceId: String): String = settings.getString("instance_${instanceId}_image_model_id", "")
+
+fun AppSettings.setInstanceImageModelId(instanceId: String, modelId: String) {
+    settings.putString("instance_${instanceId}_image_model_id", modelId)
+}
+
 /** When true, chat uses [getInstanceCustomModelId] instead of the list selection in [getInstanceModelId]. */
 fun AppSettings.getInstanceUseCustomModel(instanceId: String): Boolean = settings.getBoolean("instance_${instanceId}_use_custom_model", false)
 
@@ -127,6 +138,7 @@ fun AppSettings.setInstanceBaseUrl(instanceId: String, baseUrl: String) {
 fun AppSettings.removeInstanceSettings(instanceId: String) {
     settings.remove("instance_${instanceId}_api_key")
     settings.remove("instance_${instanceId}_model_id")
+    settings.remove("instance_${instanceId}_image_model_id")
     settings.remove("instance_${instanceId}_base_url")
     settings.remove("instance_${instanceId}_use_custom_model")
     settings.remove("instance_${instanceId}_custom_model_id")

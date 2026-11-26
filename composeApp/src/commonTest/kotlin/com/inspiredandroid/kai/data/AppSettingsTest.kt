@@ -239,4 +239,25 @@ class AppSettingsTest {
         assertTrue(instances.any { it.serviceId == Service.OpenAI.id })
         assertTrue(instances.any { it.serviceId == Service.Gemini.id })
     }
+
+    @Test
+    fun `image model id round trips without disturbing other keys`() {
+        val settings = MapSettings()
+        val appSettings = AppSettings(settings)
+        val instanceId = "openai-compatible"
+
+        assertEquals("", appSettings.getInstanceImageModelId(instanceId))
+        appSettings.setInstanceModelId(instanceId, "llama3.2")
+        appSettings.setInstanceImageModelId(instanceId, "flux1-schnell")
+        appSettings.setInstanceBaseUrl(instanceId, "http://localhost:20128/v1")
+
+        assertEquals("flux1-schnell", appSettings.getInstanceImageModelId(instanceId))
+        assertEquals("llama3.2", appSettings.getInstanceModelId(instanceId))
+        assertEquals("http://localhost:20128/v1", appSettings.getInstanceBaseUrl(instanceId))
+        assertEquals("flux1-schnell", settings.getString("instance_${instanceId}_image_model_id", ""))
+
+        appSettings.removeInstanceSettings(instanceId)
+        assertEquals("", appSettings.getInstanceImageModelId(instanceId))
+        assertEquals("", appSettings.getInstanceModelId(instanceId))
+    }
 }

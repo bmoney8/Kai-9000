@@ -65,6 +65,7 @@ class FakeDataRepository : DataRepository {
     private val configuredInstances = mutableListOf<ServiceInstance>()
     private val instanceApiKeys = mutableMapOf<String, String>()
     private val instanceBaseUrls = mutableMapOf<String, String>()
+    private val instanceImageModelIds = mutableMapOf<String, String>()
     private val instanceModels = mutableMapOf<String, MutableStateFlow<List<SettingsModel>>>()
     private var instanceCounter = 0
 
@@ -89,6 +90,7 @@ class FakeDataRepository : DataRepository {
         configuredInstances.removeAll { it.instanceId == instanceId }
         instanceApiKeys.remove(instanceId)
         instanceBaseUrls.remove(instanceId)
+        instanceImageModelIds.remove(instanceId)
         instanceModels.remove(instanceId)
     }
 
@@ -127,6 +129,12 @@ class FakeDataRepository : DataRepository {
     }
 
     // Per-instance settings
+    override fun getInstanceImageModelId(instanceId: String, service: Service): String = instanceImageModelIds[instanceId] ?: ""
+
+    override fun setInstanceImageModelId(instanceId: String, modelId: String) {
+        instanceImageModelIds[instanceId] = modelId
+    }
+
     override fun getInstanceApiKey(instanceId: String): String = instanceApiKeys[instanceId] ?: ""
 
     override fun updateInstanceApiKey(instanceId: String, apiKey: String) {

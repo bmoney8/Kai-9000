@@ -39,6 +39,8 @@ interface DataRepository {
     fun updateInstanceApiKey(instanceId: String, apiKey: String)
     fun getInstanceBaseUrl(instanceId: String, service: Service): String
     fun updateInstanceBaseUrl(instanceId: String, baseUrl: String)
+    fun getInstanceImageModelId(instanceId: String, service: Service): String
+    fun setInstanceImageModelId(instanceId: String, modelId: String)
     fun getInstanceModels(instanceId: String, service: Service): StateFlow<List<SettingsModel>>
     fun updateInstanceSelectedModel(instanceId: String, service: Service, modelId: String)
     fun getInstanceUseCustomModel(instanceId: String): Boolean

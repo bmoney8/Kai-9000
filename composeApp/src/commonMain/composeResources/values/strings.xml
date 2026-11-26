@@ -33,6 +33,8 @@
     <string name="settings_business_partnerships_description">Want to feature your company logo or discuss a strategic partnership?</string>
     <string name="settings_contact_sponsorship">Contact for Strategic Sponsorship</string>
     <string name="settings_base_url_label">Server URL</string>
+    <string name="settings_image_model_label">Image model (optional)</string>
+    <string name="settings_image_model_hint">Model id for image generation via /images/generations; leave empty to disable.</string>
     <string name="settings_status_checking">Checking connection...</string>
     <string name="settings_status_connected">Connected</string>
     <string name="settings_status_error">Connection failed</string>
@@ -296,6 +298,9 @@
     <string name="tab_chat">Chat</string>
     <string name="tab_settings">Settings</string>
     <string name="fallback_answered_by">Answered by %1$s (fallback)</string>
+    <!-- OmniRoute routing headers shown subtly beneath an assistant turn; absent headers render nothing. -->
+    <string name="omniroute_decision">Routing: %1$s</string>
+    <string name="omniroute_compression">Compression: %1$s</string>
     <string name="fallback_service_failed">%1$s: %2$s</string>
     <string name="fallback_trying_next">Trying %1$s…</string>
     <string name="error_all_services_failed">All services failed.</string>

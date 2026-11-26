@@ -40,6 +40,7 @@ import com.inspiredandroid.kai.network.OpenAICompatibleInvalidApiKeyException
 import com.inspiredandroid.kai.network.OpenAICompatibleModelNotFoundException
 import com.inspiredandroid.kai.network.OpenAICompatibleQuotaExhaustedException
 import com.inspiredandroid.kai.network.OpenAICompatibleRequestTooLargeException
+import com.inspiredandroid.kai.network.OmniRouteRouting
 import com.inspiredandroid.kai.network.Requests
 import com.inspiredandroid.kai.network.ServiceCredentials
 import com.inspiredandroid.kai.network.UnsupportedFileTypeException
@@ -144,6 +145,7 @@ private data class LoopChatResult(
     val reasoningContent: String? = null,
     val isThinkingContent: Boolean = false,
     val toolCalls: List<ToolCallInfo>,
+    val routing: OmniRouteRouting? = null,
 )
 
 /** Final answer from a single assistant turn — text and (optionally) the reasoning trace
@@ -151,6 +153,7 @@ private data class LoopChatResult(
 private data class AssistantTurn(
     val content: String,
     val reasoningContent: String? = null,
+    val routing: OmniRouteRouting? = null,
 )
 
 private enum class BailoutReason { LIMIT_REACHED, REPEATING }
@@ -233,7 +236,15 @@ class RemoteDataRepository(
             appSettings.getInstanceEffectiveModelId(instanceId).ifEmpty { appSettings.getSelectedModelId(service) }
         },
         baseUrl = getInstanceBaseUrl(instanceId, service),
+        imageModelId = if (service is Service.OpenAICompatible) getInstanceImageModelId(instanceId) else "",
     )
+
+    override fun getInstanceImageModelId(instanceId: String, service: Service): String =
+        if (service is Service.OpenAICompatible) appSettings.getInstanceImageModelId(instanceId) else ""
+
+    override fun setInstanceImageModelId(instanceId: String, modelId: String) {
+        appSettings.setInstanceImageModelId(instanceId, modelId)
+    }
 
     override val chatHistory: MutableStateFlow<List<History>> = MutableStateFlow(emptyList())
 
@@ -794,13 +805,21 @@ class RemoteDataRepository(
                     return AssistantTurn(content.orEmpty(), response.reasoningSummary)
                 }
                 val sessionId = activeConversationId()
+                var routing: OmniRouteRouting? = null
                 val response = call {
-                    requests.openAICompatibleChat(service, credentials, openAIMessages, sessionId = sessionId, requestTimeoutMs = requestTimeoutMs).getOrThrow()
+                    requests.openAICompatibleChat(
+                        service,
+                        credentials,
+                        openAIMessages,
+                        sessionId = sessionId,
+                        requestTimeoutMs = requestTimeoutMs,
+                        onRoutingCaptured = { routing = it },
+                    ).getOrThrow()
                 }
                 val message = response.choices.firstOrNull()?.message
                 val content = message?.effectiveContent
                 if (content == null && strictEmptyResponse) throw OpenAICompatibleEmptyResponseException()
-                AssistantTurn(content.orEmpty(), message?.reasoningTraceFor(content))
+                AssistantTurn(content.orEmpty(), message?.reasoningTraceFor(content), routing)
             }
         }
     }
@@ -997,6 +1016,7 @@ class RemoteDataRepository(
                                 content = turn.content,
                                 reasoningContent = turn.reasoningContent,
                                 fallbackServiceName = fallbackServiceName,
+                                routing = turn.routing,
                             ),
                         )
                     }
@@ -1053,8 +1073,16 @@ class RemoteDataRepository(
                     )
                 }
                 val sessionId = activeConversationId()
+                var routing: OmniRouteRouting? = null
                 val response = retryApiCall {
-                    requests.openAICompatibleChat(service, credentials, msgs, tools, sessionId = sessionId).getOrThrow()
+                    requests.openAICompatibleChat(
+                        service,
+                        credentials,
+                        msgs,
+                        tools,
+                        sessionId = sessionId,
+                        onRoutingCaptured = { routing = it },
+                    ).getOrThrow()
                 }
                 val message = response.choices.firstOrNull()?.message ?: throw OpenAICompatibleEmptyResponseException()
                 var calls = message.toolCalls.orEmpty().map { tc ->
@@ -1079,6 +1107,7 @@ class RemoteDataRepository(
                     reasoningContent = message.reasoningTraceFor(textContent),
                     isThinkingContent = message.isContentFromReasoning,
                     toolCalls = calls,
+                    routing = routing,
                 )
             }
 
@@ -1195,7 +1224,7 @@ class RemoteDataRepository(
                 // For thinking-only turns, the reasoning text already became the content via
                 // `isContentFromReasoning`, so don't surface it again as a reasoning trace.
                 val reasoning = result.reasoningContent?.takeIf { !result.isThinkingContent }
-                return AssistantTurn(result.textContent, reasoning)
+                return AssistantTurn(result.textContent, reasoning, result.routing)
             }
 
             val signatures = result.toolCalls.map { "${it.name}:${it.arguments.hashCode()}" }
@@ -1603,6 +1632,7 @@ class RemoteDataRepository(
                         uiSubmission = h.uiSubmission,
                         isThinking = h.isThinking,
                         reasoningContent = h.reasoningContent,
+                        routing = h.routing,
                     )
                 },
             createdAt = existingConversation?.createdAt ?: now,
@@ -1682,6 +1712,7 @@ class RemoteDataRepository(
                 uiSubmission = m.uiSubmission,
                 isThinking = m.isThinking,
                 reasoningContent = m.reasoningContent,
+                routing = m.routing,
             )
         }
     }
