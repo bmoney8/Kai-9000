@@ -19,6 +19,8 @@ import com.inspiredandroid.kai.network.dtos.gemini.GeminiTool
 import com.inspiredandroid.kai.network.dtos.gemini.PropertySchema
 import com.inspiredandroid.kai.network.dtos.openaicompatible.OpenAICompatibleChatRequestDto
 import com.inspiredandroid.kai.network.dtos.openaicompatible.OpenAICompatibleChatResponseDto
+import com.inspiredandroid.kai.network.dtos.openaicompatible.OpenAICompatibleImageRequestDto
+import com.inspiredandroid.kai.network.dtos.openaicompatible.OpenAICompatibleImageResponseDto
 import com.inspiredandroid.kai.network.dtos.openaicompatible.OpenAICompatibleModelResponseDto
 import com.inspiredandroid.kai.network.dtos.openairesponses.OpenAIResponsesRequestDto
 import com.inspiredandroid.kai.network.dtos.openairesponses.OpenAIResponsesResponseDto
@@ -61,6 +63,8 @@ data class ServiceCredentials(
     val apiKey: String = "",
     val modelId: String = "",
     val baseUrl: String = "",
+    /** Image-generation model id; empty when images are disabled for this instance. */
+    val imageModelId: String = "",
 )
 
 /** Applies a per-request override of the client-wide timeouts, when the caller supplied one. */
@@ -259,6 +263,8 @@ class Requests {
         customHeaders: Map<String, String> = emptyMap(),
         sessionId: String? = null,
         requestTimeoutMs: Long? = null,
+        /** Optional callback to capture routing headers; no payload or routing changes. */
+        onRoutingCaptured: (OmniRouteRouting?) -> Unit = {},
     ): Result<OpenAICompatibleChatResponseDto> = try {
         val apiKey = getApiKeyOrThrow(service, credentials)
         val model = credentials.modelId.ifEmpty { null }
@@ -279,6 +285,57 @@ class Requests {
                 )
             }
         if (response.status.isSuccess()) {
+            onRoutingCaptured(parseOmniRouteHeaders(response.headers.entries().associate { it.key to it.value.joinToString(",") }))
+            Result.success(response.body())
+        } else {
+            handleOpenAICompatibleError(service, credentials, response)
+        }
+    } catch (e: OpenAICompatibleApiException) {
+        Result.failure(e)
+    } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
+        Result.failure(OpenAICompatibleConnectionException())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(mapOpenAICompatibleException(e))
+    }
+
+    /**
+     * Generates images through the same OpenAI-compatible base URL as chat. The configured image
+     * model is explicit and separate from the text model; empty model ids fail closed.
+     */
+    suspend fun openAICompatibleImages(
+        service: Service,
+        credentials: ServiceCredentials,
+        prompt: String,
+        n: Int? = null,
+        size: String? = null,
+        responseFormat: String? = null,
+        requestTimeoutMs: Long? = null,
+        onRoutingCaptured: (OmniRouteRouting?) -> Unit = {},
+    ): Result<OpenAICompatibleImageResponseDto> = try {
+        val endpoint = service.imageEndpoint
+            ?: throw OpenAICompatibleGenericException("Image generation URL not configured for ${service.displayName}")
+        if (credentials.imageModelId.isBlank()) {
+            throw OpenAICompatibleGenericException("Image model is not configured for ${service.displayName}")
+        }
+        val apiKey = getApiKeyOrThrow(service, credentials)
+        val response = defaultClient.post(resolveUrl(service, credentials, endpoint)) {
+            applyTimeout(requestTimeoutMs)
+            contentType(ContentType.Application.Json)
+            apiKey?.let { bearerAuth(it) }
+            setBody(
+                OpenAICompatibleImageRequestDto(
+                    prompt = prompt,
+                    model = credentials.imageModelId,
+                    n = n,
+                    size = size,
+                    responseFormat = responseFormat,
+                ),
+            )
+        }
+        if (response.status.isSuccess()) {
+            onRoutingCaptured(parseOmniRouteHeaders(response.headers.entries().associate { it.key to it.value.joinToString(",") }))
             Result.success(response.body())
         } else {
             handleOpenAICompatibleError(service, credentials, response)
@@ -511,7 +568,7 @@ class Requests {
     // region Helpers
 
     private fun resolveUrl(service: Service, credentials: ServiceCredentials, path: String): String = if (service == Service.OpenAICompatible) {
-        "${Service.normalizeOpenAICompatibleBaseUrl(credentials.baseUrl)}$path"
+        Service.resolveOpenAICompatibleEndpoint(credentials.baseUrl, path)
     } else {
         path
     }

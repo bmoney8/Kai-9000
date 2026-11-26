@@ -10,6 +10,7 @@ import com.inspiredandroid.kai.data.ServiceEntry
 import com.inspiredandroid.kai.data.SharedJson
 import com.inspiredandroid.kai.data.SmsDraft
 import com.inspiredandroid.kai.data.UiSubmission
+import com.inspiredandroid.kai.network.OmniRouteRouting
 import com.inspiredandroid.kai.network.UiError
 import com.inspiredandroid.kai.network.dtos.gemini.GeminiChatRequestDto
 import com.inspiredandroid.kai.network.dtos.openaicompatible.OpenAICompatibleChatRequestDto
@@ -113,6 +114,8 @@ data class History(
     // Preserved from a tool-call assistant turn so it can be round-tripped
     // back to providers (e.g. DeepSeek) that require it on the next request.
     val reasoningContent: String? = null,
+    /** Gateway routing headers on the assistant turn, shown only when present. */
+    val routing: OmniRouteRouting? = null,
 ) {
     enum class Role {
         USER,

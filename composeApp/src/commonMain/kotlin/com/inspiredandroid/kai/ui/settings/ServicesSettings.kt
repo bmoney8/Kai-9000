@@ -340,6 +340,7 @@ internal fun ServicesContent(uiState: SettingsUiState, actions: SettingsActions)
                     onSelectModel = { modelId -> actions.onSelectModel(entry.instanceId, modelId) },
                     onToggleUseCustomModel = { use -> actions.onToggleUseCustomModel(entry.instanceId, use) },
                     onChangeCustomModelId = { id -> actions.onChangeCustomModelId(entry.instanceId, id) },
+                    onChangeImageModelId = { id -> actions.onChangeImageModelId(entry.instanceId, id) },
                     onRemove = { actions.onRemoveService(entry.instanceId) },
                     isDragging = isDragging,
                     dragHandleModifier = if (entries.size >= 2) Modifier.draggableHandle() else null,
@@ -469,6 +470,7 @@ private fun ConfiguredServiceCardContent(
     onSelectModel: (String) -> Unit,
     onToggleUseCustomModel: (Boolean) -> Unit = {},
     onChangeCustomModelId: (String) -> Unit = {},
+    onChangeImageModelId: (String) -> Unit = {},
     onRemove: () -> Unit,
     isDragging: Boolean = false,
     dragHandleModifier: Modifier? = null,
@@ -611,6 +613,8 @@ private fun ConfiguredServiceCardContent(
                         customModelId = entry.customModelId,
                         onToggleUseCustomModel = onToggleUseCustomModel,
                         onChangeCustomModelId = onChangeCustomModelId,
+                        imageModelId = entry.imageModelId,
+                        onChangeImageModelId = onChangeImageModelId,
                         connectionStatus = entry.connectionStatus,
                         onOpenAppPermissionSettings = onOpenAppPermissionSettings,
                     )
@@ -717,6 +721,8 @@ private fun OpenAICompatibleSettings(
     customModelId: String,
     onToggleUseCustomModel: (Boolean) -> Unit,
     onChangeCustomModelId: (String) -> Unit,
+    imageModelId: String,
+    onChangeImageModelId: (String) -> Unit,
     connectionStatus: ConnectionStatus,
     onOpenAppPermissionSettings: () -> Unit = {},
 ) {
@@ -752,6 +758,26 @@ private fun OpenAICompatibleSettings(
     Spacer(Modifier.height(8.dp))
 
     ConnectionStatusIndicator(connectionStatus, onOpenAppPermissionSettings)
+
+    Spacer(Modifier.height(8.dp))
+
+    KaiClearableTextField(
+        value = imageModelId,
+        onValueChange = onChangeImageModelId,
+        label = {
+            Text(
+                stringResource(Res.string.settings_image_model_label),
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        },
+        singleLine = true,
+    )
+    Text(
+        text = stringResource(Res.string.settings_image_model_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp),
+    )
 
     Spacer(Modifier.height(8.dp))
 

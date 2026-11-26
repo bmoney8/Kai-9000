@@ -858,6 +858,22 @@ private fun ChatModeScreen(
                                                             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                                                         )
                                                     }
+                                                    history.routing?.let { routing ->
+                                                        if (!routing.isEmpty) {
+                                                            val parts = buildList {
+                                                                routing.decision?.let { add(stringResource(Res.string.omniroute_decision, it)) }
+                                                                routing.compression?.let { add(stringResource(Res.string.omniroute_compression, it)) }
+                                                            }
+                                                            if (parts.isNotEmpty()) {
+                                                                androidx.compose.material3.Text(
+                                                                    text = parts.joinToString(" · "),
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 } else if (history.isThinking &&
                                                     history.content.isNotEmpty() &&
                                                     history.id !in suppressedThinkingIds

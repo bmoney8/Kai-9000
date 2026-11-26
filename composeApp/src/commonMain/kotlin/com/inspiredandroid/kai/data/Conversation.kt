@@ -2,6 +2,7 @@ package com.inspiredandroid.kai.data
 
 import androidx.compose.runtime.Immutable
 import com.inspiredandroid.kai.TerminalLine
+import com.inspiredandroid.kai.network.OmniRouteRouting
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -46,6 +47,10 @@ data class Conversation(
         // Most messages have no reasoning trace; skip the null to keep the persisted blob lean.
         @EncodeDefault(EncodeDefault.Mode.NEVER)
         val reasoningContent: String? = null,
+        // Gateway routing headers on assistant turns. Null on old conversations and on all
+        // providers that do not emit them; omitted from the persisted blob when null.
+        @EncodeDefault(EncodeDefault.Mode.NEVER)
+        val routing: OmniRouteRouting? = null,
         // Legacy single-file fields — retained for reading old persisted conversations.
         // New code writes only `attachments`; these remain null on newly saved messages.
         val mimeType: String? = null,

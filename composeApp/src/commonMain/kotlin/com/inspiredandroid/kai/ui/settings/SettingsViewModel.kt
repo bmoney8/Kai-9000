@@ -158,6 +158,7 @@ class SettingsViewModel(
         onSelectModel = ::onSelectModel,
         onToggleUseCustomModel = ::onToggleUseCustomModel,
         onChangeCustomModelId = ::onChangeCustomModelId,
+        onChangeImageModelId = ::onChangeImageModelId,
         onToggleTool = ::onToggleTool,
         onSaveSoul = ::onSaveSoul,
         onToggleDynamicUi = ::onToggleDynamicUi,
@@ -331,6 +332,7 @@ class SettingsViewModel(
             models = models.toImmutableList(),
             useCustomModel = dataRepository.getInstanceUseCustomModel(instance.instanceId),
             customModelId = dataRepository.getInstanceCustomModelId(instance.instanceId),
+            imageModelId = dataRepository.getInstanceImageModelId(instance.instanceId, service),
         )
     }
 
@@ -500,6 +502,17 @@ class SettingsViewModel(
             state.copy(
                 configuredServices = state.configuredServices.map { e ->
                     if (e.instanceId == instanceId) e.copy(customModelId = modelId) else e
+                }.toImmutableList(),
+            )
+        }
+    }
+
+    private fun onChangeImageModelId(instanceId: String, modelId: String) {
+        dataRepository.setInstanceImageModelId(instanceId, modelId)
+        _state.update { state ->
+            state.copy(
+                configuredServices = state.configuredServices.map { e ->
+                    if (e.instanceId == instanceId) e.copy(imageModelId = modelId) else e
                 }.toImmutableList(),
             )
         }
