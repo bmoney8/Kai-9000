@@ -1,0 +1,13 @@
+Rebase verification
+HEAD: d0d5c6ebc698100ce802b668947e5979d72c4def
+origin/main: 0e7e2402c9cdf37dce9e921310bdcd11348af014
+merge-base: 0e7e2402c9cdf37dce9e921310bdcd11348af014
+
+Test files in PR diff:
+composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/EndpointHealthProbeTest.kt
+composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/FailoverPreflightTest.kt
+composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/FailoverSettingsTest.kt
+
+PASS: git diff --check
+PASS: branch rebased onto origin/main
+PASS: no conflict markers in Kotlin/Markdown
