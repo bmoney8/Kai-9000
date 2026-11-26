@@ -142,3 +142,7 @@ When the last LiteRT service instance is removed, all downloaded and imported mo
 | `composeApp/src/commonMain/.../network/NetworkExceptions.kt` | Maps inference failures, including a failed integrity check, to user-facing errors |
 | `composeApp/src/commonMain/.../ui/settings/ServicesSettings.kt` | LiteRT service card: model list, download/import controls, progress and error display |
 | `composeApp/src/commonMain/.../ui/settings/SettingsScreen.kt` | Hosts service settings including LiteRT model management |
+
+## Local image generation seam
+
+Image generation is a separate provider seam and does not alter the LiteRT-LM text inference loop. The desktop/Android/iOS factories currently return `null` until a native `stable-diffusion.cpp` adapter is bundled. The seam keeps Vulkan integrated-GPU optional, AVX2 CPU as the guaranteed CPU fallback, and DirectML capability-gated. It also unloads the image runtime in a `finally` block after every successful or failed generation. See [Local Image Generation](local-image-generation.md) for the model whitelist, benchmark plan and memory/storage budgets.
